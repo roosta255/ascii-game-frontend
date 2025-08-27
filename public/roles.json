@@ -1,0 +1,22 @@
+{
+    "TOGGLER": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 3,
+            "eyes": 3,
+            "sprite": "TOGGLER",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "BUILDER": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 3,
+            "eyes": 3,
+            "sprite": "BUILDER",
+            "bleedable": false,
+            "sleepable": false
+        }
+    }
+}

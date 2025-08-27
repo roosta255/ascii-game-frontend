@@ -1,0 +1,180 @@
+{
+    "WALL": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "DOORWAY": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_ORANGE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_BLUE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "SHIFTER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "SHIFTER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_ORANGE_CLOSED": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_TOGGLER_NORTH",
+                    "palette": 12
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_EAST",
+                    "palette": 12
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_SOUTH",
+                    "palette": 12
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_WEST",
+                    "palette": 12
+                }
+            ]
+        }
+    },
+    "TOGGLER_BLUE_CLOSED": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_TOGGLER_NORTH",
+                    "palette": 13
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_EAST",
+                    "palette": 13
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_SOUTH",
+                    "palette": 13
+                },
+                {
+                    "sprite": "DOOR_TOGGLER_WEST",
+                    "palette": 13
+                }
+            ]
+        }
+    },
+    "KEEPER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
+    "KEEPER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
+    "SHIFTER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
+    "SHIFTER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    }
+}

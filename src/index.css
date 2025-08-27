@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: black;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,21 +13,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@font-face {
+  font-family: 'RexPaintFont';
+  src: url('/ascii-game-frontend/fonts/Px437_IBM_EGA_8x8.ttf') format('truetype');
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: black !important;
+  color: white !important;
+  font-family: 'RexPaintFont', monospace;
+}
+
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #8ea5ff;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  color: #aab8ff;
 }
 
 h1 {
@@ -37,17 +43,19 @@ h1 {
 
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid #444;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #111;
+  color: white;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s;
 }
 button:hover {
   border-color: #646cff;
+  background-color: #222;
 }
 button:focus,
 button:focus-visible {
@@ -56,13 +64,17 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: black;
   }
   a:hover {
-    color: #747bff;
+    color: #aab8ff;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: #111;
   }
+}
+
+* {
+  font-family: 'RexPaintFont', monospace !important;
 }

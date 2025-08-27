@@ -1,8 +1,10 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
   padding: 2rem;
-  text-align: center;
+  background-color: black;
+  color: white;
 }
 
 .logo {
@@ -39,4 +41,11 @@
 
 .read-the-docs {
   color: #888;
+}
+
+pre {
+  font-family: 'RexPaintFont', monospace !important;
+  font-size: 16px;
+  line-height: 1;
+  white-space: pre;
 }

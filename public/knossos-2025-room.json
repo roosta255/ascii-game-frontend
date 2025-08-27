@@ -1,0 +1,16 @@
+{
+    "path": "knossos-2025-room.xp",
+    "palettes": 19,
+    "size": [39, 40],
+    "stride": [40, 41],
+    "offset": [0, 19],
+    "default": [0, 0],
+    "sprites": {
+        "BOARD": [0,0],
+        "DOORWAY": [1,0],
+        "DOORWAY_EXITS": [3,0]
+    },
+    "spritesWithHorizontalFlip": {},
+    "spritesWithVerticalFlip": {},
+    "spritesWithHorizontalAndVerticalFlip": {}
+}
