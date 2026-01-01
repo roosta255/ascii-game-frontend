@@ -78,3 +78,14 @@ button:focus-visible {
 * {
   font-family: 'RexPaintFont', monospace !important;
 }
+
+.scene {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}

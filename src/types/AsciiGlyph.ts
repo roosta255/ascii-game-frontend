@@ -69,52 +69,59 @@ export function isTransparent(glyph: AsciiGlyph): boolean {
 }
 
 export async function loadXp(buffer: ArrayBuffer): Promise<AsciiGlyph[][][]> {
-    const decompressed = pako.inflate(new Uint8Array(buffer));
-    const data = new DataView(decompressed.buffer);
-  
-    const version = data.getInt32(0, true);
-    const layerCount = data.getInt32(4, true);
-    const width = data.getInt32(8, true);
-    const height = data.getInt32(12, true);
-  
-    console.log("🧵 XP Metadata:", { version, layerCount, width, height });
-  
-    const layers: AsciiGlyph[][][] = [];
-  
-    let offset = 16;
-  
-    for (let z = 0; z < layerCount; z++) {
-      const layer: AsciiGlyph[][] = [];
-  
-      for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-          const charCode = data.getUint32(offset, true);
-          const fg = data.getInt32(offset + 4, true);
-          const bg = data.getInt16(offset + 8, true);
-          offset += 10;
-  
-          if (!layer[y]) layer[y] = [];
-          layer[y][x] = {
-            // raw: charCode & 0xff,
-            char: cp437_to_unicode[charCode & 0xff] ?? "?",
-            fg: swapRedBlue(fg),
-            bg: swapRedBlue(bg),
-          };
-        }
+  const decompressed = pako.inflate(new Uint8Array(buffer));
+  const data = new DataView(decompressed.buffer);
+
+  const version = data.getInt32(0, true);
+  const layerCount = data.getInt32(4, true);
+  const width = data.getInt32(8, true);
+  const height = data.getInt32(12, true);
+
+  console.log("🧵 XP Metadata:", { version, layerCount, width, height });
+
+  const layers: AsciiGlyph[][][] = [];
+
+  let offset = 16;
+
+  for (let z = 0; z < layerCount; z++) {
+    const layer: AsciiGlyph[][] = [];
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const charCode = data.getUint32(offset, true);
+        const fg = data.getInt32(offset + 4, true);
+        const bg = data.getInt16(offset + 8, true);
+        offset += 10;
+
+        if (!layer[y]) layer[y] = [];
+        layer[y][x] = {
+          // raw: charCode & 0xff,
+          char: cp437_to_unicode[charCode & 0xff] ?? "?",
+          fg: swapRedBlue(fg),
+          bg: swapRedBlue(bg),
+        };
       }
-  
-      layers.push(layer);
-  
-      console.log("🔍 Sample at", {
-        "<0,0>": layer[0]?.[0],
-        "<1,0>": layer[0]?.[1],
-        "<0,1>": layer[1]?.[0],
-        "<1,1>": layer[1]?.[1],
-        "<2,91>": layer[91]?.[2],
-      });
-  
-      offset += 8; // Skip 8-byte layer delimiter
     }
-  
-    return layers;
+
+    layers.push(layer);
+
+    console.log("🔍 Sample at", {
+      "<0,0>": layer[0]?.[0],
+      "<1,0>": layer[0]?.[1],
+      "<0,1>": layer[1]?.[0],
+      "<1,1>": layer[1]?.[1],
+      "<2,91>": layer[91]?.[2],
+    });
+
+    offset += 8; // Skip 8-byte layer delimiter
   }
+
+  return layers;
+}
+
+export function createBlankCanvas(width: number, height: number): AsciiGlyph[][] {
+  const blankGlyph: AsciiGlyph = { char: " ", fg: 0, bg: 0 };
+  return Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => ({ ...blankGlyph }))
+  );
+}

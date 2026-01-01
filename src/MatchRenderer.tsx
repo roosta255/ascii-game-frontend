@@ -1,47 +1,21 @@
-import React, { useEffect, useState } from "react";
-import { loadXp, AsciiGlyph } from "./loadXp";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
 import { Painter } from "./assets/Painter";
+import { AnimatedCharacter } from "./types/AnimatedCharacter";
+import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
+import { rebuildGlyphs } from "./types/DrawerProps";
+import { isKeyframeAnimating, Keyframe } from "./types/Keyframe";
+import { CellSize, measureCellSize } from "./types/CellSize";
+import { TimeRef } from "./types/TimeRef";
+import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor } from "./types/RoomProps";
+import "./MatchRenderer.css";
 
 export interface MatchRendererProps {
   match: any;
   viewedRoomId: number;
   setViewedRoomId: (id: number) => void;
-}
-
-function intToCssColor(color: number): string {
-  return "#" + color.toString(16).padStart(6, "0");
-}
-
-function blockToText(block: AsciiGlyph[][]): JSX.Element {
-  return (
-    <>
-      {block.map((row, y) => (
-        <div key={y} style={{ lineHeight: 1, whiteSpace: "pre" }}>
-          {row.map((glyph, x) => (
-            <span
-              key={x}
-              onClick={() => glyph.onClick?.(x, y)}
-              style={{
-                color: intToCssColor(glyph.fg),
-                backgroundColor: intToCssColor(glyph.bg),
-                cursor: glyph.onClick ? "pointer" : "default",
-              }}
-            >
-              {glyph.char}
-            </span>
-          ))}
-        </div>
-      ))}
-    </>
-  );
-}
-
-export function createBlankCanvas(width: number, height: number): AsciiGlyph[][] {
-  const blankGlyph: AsciiGlyph = { char: " ", fg: 0, bg: 0 };
-  return Array.from({ length: height }, () =>
-    Array.from({ length: width }, () => ({ ...blankGlyph }))
-  );
+  timeRef: TimeRef;
 }
 
 function getAllCharacters(match: any): any[] {
@@ -52,12 +26,15 @@ function getAllCharacters(match: any): any[] {
   return allCharacters;
 }
 
-export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: MatchRendererProps) {
+export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, timeRef }: MatchRendererProps) {
   const [backgroundTexture, setBackgroundTexture] = useState<Texture | null>(null);
   const [spriteMeta, setSpriteMeta] = useState<any>(null);
   const [rolePainter, setRolePainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
+  const [renderTime, setRenderTime] = useState<number>(0);
+  const cellSize = useRef<CellSize | null>(null);
+  const sceneRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -94,15 +71,52 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
       .catch(err => console.error("❌ Failed to load doors.json:", err));
   }, []);
 
-  if (!backgroundTexture || !iconsTexture || !spriteMeta || !match || !rolePainter || !doorPainter) {
-    return <pre>Loading...</pre>;
+  useEffect(() => {
+    let rafId: number;
+
+    const tick = () => {
+      setRenderTime(performance.now());
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!sceneRef.current) return;
+    cellSize.current = measureCellSize(sceneRef.current);
+    console.log(cellSize.current);
+  }, []);
+
+  const isRenderReady = backgroundTexture && spriteMeta && rolePainter && doorPainter && iconsTexture && match;
+  const isAnimationReady = isRenderReady && cellSize && renderTime;
+
+  if (!isAnimationReady) {
+    return (<div ref={sceneRef} className="scene">
+        <pre>Loading...</pre>
+      </div>);
   }
+
+  const roomProps: RoomProps = {
+    position: [0,0],
+    cells: {
+      offset: [8,8],
+      stride: [6,5],
+      size: [5,4],
+    },
+  };
 
   const globals = {
     textures: {
       icons: iconsTexture,
       rooms: backgroundTexture,
     },
+    painters: {
+      roles: rolePainter,
+      doors: doorPainter,
+    },
+    roomProps: roomProps,
     glyphs: createBlankCanvas(60, 42),
   };
 
@@ -112,6 +126,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
   const BUILDER_ID = 0;
   const account = match.builders[BUILDER_ID].player.account;
   const builderOffset = match.builders[BUILDER_ID].character.offset;
+  const times = timeRef.current;
 
   function markRegionClickable(
     startX: number,
@@ -133,11 +148,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
 
   function drawRoomAt(roomX: number, roomY: number, room: any, roomId: number) {
 
+    // TODO: remove global mutation
+    globals.roomProps.position = [roomX, roomY];
+
     // console.log("Rendering roomid: ", roomId);
 
     function drawCharacterAt(drawX: number, drawY: number, cell: any) {
       const character = cell.offset && offsetMap[cell.offset];
       if (!character) return;
+      // animations check
+
+      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, times.fetchTime)) !== undefined) return;
       const onClick = async () => {
         try {
           const subject = character.isObject ? builderOffset : cell.offset;
@@ -165,27 +186,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
       rolePainter.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick}});
     }
 
-    backgroundTexture.draw(globals.glyphs, "BOARD", roomX, roomY, 16);
+    globals.textures.rooms.draw(globals.glyphs, "BOARD", roomX, roomY, 16);
     const DOOR_PALETTE_OFFSET = 1;
     const doorPalette = DOOR_PALETTE_OFFSET +
       (room.walls[0].isDoorway ? 1 : 0) +
       (room.walls[1].isDoorway ? 2 : 0) +
       (room.walls[2].isDoorway ? 4 : 0) +
       (room.walls[3].isDoorway ? 8 : 0);
-    backgroundTexture.draw(globals.glyphs, "DOORWAY", roomX, roomY, doorPalette);
+    globals.textures.rooms.draw(globals.glyphs, "DOORWAY", roomX, roomY, doorPalette);
 
-    const FLOOR_OFFSET_X = 8;
-    const FLOOR_OFFSET_Y = 8;
-    const CELL_STRIDE_X = 6;
-    const CELL_STRIDE_Y = 5;
     const CELL_SIZE_X = 5;
     const CELL_SIZE_Y = 4;
-    function toFloorGlyphs(cellX: number, cellY: number): [number, number] {
-      return [
-        cellX * CELL_STRIDE_X + roomX + FLOOR_OFFSET_X,
-        cellY * CELL_STRIDE_Y + roomY + FLOOR_OFFSET_Y,
-      ];
-    }
 
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
@@ -214,7 +225,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
 
     var i = 0;
     for (const cell of room.floorCells) {
-      const [drawX, drawY] = toFloorGlyphs(cell.x, cell.y);
+      const [drawX, drawY] = toFloorGlyphsFromCell(roomProps, [cell.x, cell.y]);
       const character = cell.offset && offsetMap[cell.offset];
       if (!character) {
         setClickableFloor(drawX, drawY, i);
@@ -256,29 +267,36 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId }: 
       });
     }
 
-    // Example door interactions
-    let [dx, dy] = toFloorGlyphs(1, -1);
-    drawCharacterAt(dx, dy, room.walls[0].cell);
-    doorPainter.draw(room.walls[0].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-    setClickableDoorway(dx, dy, 0);
-
-    [dx, dy] = toFloorGlyphs(4, 2);
-    drawCharacterAt(dx, dy, room.walls[1].cell);
-    doorPainter.draw(room.walls[1].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-    setClickableDoorway(dx, dy, 1);
-
-    [dx, dy] = toFloorGlyphs(1, 5);
-    drawCharacterAt(dx, dy, room.walls[2].cell);
-    doorPainter.draw(room.walls[2].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-    setClickableDoorway(dx, dy, 2);
-
-    [dx, dy] = toFloorGlyphs(-1, 2);
-    drawCharacterAt(dx, dy, room.walls[3].cell);
-    doorPainter.draw(room.walls[3].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-    setClickableDoorway(dx, dy, 3);
+    for (var i = 0; i < 4; i++) {
+      let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
+      drawCharacterAt(dx, dy, room.walls[i].cell);
+      globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
+      setClickableDoorway(dx, dy, i);
+    }
   }
 
   drawRoomAt(0, 0, room, viewedRoomId);
 
-  return <pre>{blockToText(globals.glyphs)}</pre>;
+  const animationTime = performance.now() - times.serverToClientOffset
+
+  return (
+  <div ref={sceneRef} className="scene">
+    <pre>{blockToText(globals.glyphs)}</pre>
+    <div className="overlay">
+      {getAllCharacters(match).map(character =>
+        character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
+          ? (
+            <AnimatedCharacter
+              character={character}
+              animationTime={animationTime}
+              globals={rebuildGlyphs(globals, 5,4)}
+              room={roomProps}
+            />
+          )
+          : null
+      )}
+    </div>
+  </div>
+);
+
 }

@@ -1,0 +1,25 @@
+.scene {
+  position: relative;
+  font-family: monospace;
+  font-size: 16px;      /* example */
+  line-height: 1;       /* CRITICAL */
+}
+
+.scene > pre {
+  margin: 0;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.animated-character {
+  position: absolute;
+  font-family: "RexPaintFont", monospace;
+  white-space: pre;
+  line-height: 1;
+  pointer-events: none;
+}

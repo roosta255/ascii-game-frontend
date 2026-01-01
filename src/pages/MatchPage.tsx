@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import MatchRenderer from "../MatchRenderer";
 import { useAuth } from "../AuthContext";
+import { TimeRef, updateTimeRef } from "../types/TimeRef";
 
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -9,6 +10,13 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [viewedRoomId, setViewedRoomId] = useState<number | null>(null);
   const { account: currentAccount } = useAuth();
+
+  const timeRef = useRef<TimeRef>({
+    serverToClientOffset: 0,
+    lastServerTime: 0,
+    lastClientTime: 0,
+    fetchTime: 0,
+  });
 
   function findRoomIdForOffset(match: any, offset: number): number | null {
     for (let i = 0; i < match.dungeon.rooms.length; i++) {
@@ -29,6 +37,8 @@ export default function MatchPage() {
       .then(rawString => {
         const data = JSON.parse(rawString);
         setMatch(data);
+
+        updateTimeRef(timeRef.current, data.serverTime);
 
         const builder = data.builders.find((b: any) => b.player.account === currentAccount);
         if (!builder) {
@@ -76,12 +86,13 @@ export default function MatchPage() {
         const data = JSON.parse(raw);           // Second parse: gives actual match object
 
         if (isMounted) setMatch(data);          // ✅ match is now an object
+        updateTimeRef(timeRef.current, data.serverTime);
       } catch (err) {
         console.error("Polling update failed:", err);
       }
     }
 
-    const interval = setInterval(fetchUpdates, 1500);
+    const interval = setInterval(fetchUpdates, 600);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -97,6 +108,7 @@ export default function MatchPage() {
         match={match}
         viewedRoomId={viewedRoomId}
         setViewedRoomId={setViewedRoomId}
+        timeRef={timeRef}
       />
   
       {match.turners.includes(currentAccount) && (

@@ -1,7 +1,7 @@
 // src/systems/RendererSystem.ts — Refactored to remove if-chains using function mapping for TypeScript polymorphism
 
 import { Texture } from "./Texture";
-import { AsciiGlyph } from "../loadXp";
+import { AsciiGlyph } from "../types/AsciiGlyph";
 
 export interface DirectionalIconRendererEntry {
     sprite: string;

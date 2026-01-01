@@ -1,5 +1,5 @@
 // texture.ts — Handles sprite extraction and rendering from a texture atlas
-import { AsciiGlyph, getColor, isTransparent } from "../loadXp";
+import { AsciiGlyph, getColor, isTransparent } from "../types/AsciiGlyph";
 
 interface SpriteMeta {
   offset: [number, number];
