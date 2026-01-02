@@ -10,6 +10,7 @@ interface TextureProps {
 interface PainterProps {
     roles: Painter;
     doors: Painter;
+    locks: Painter;
 };
 
 export interface DrawerProps {

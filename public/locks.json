@@ -1,0 +1,84 @@
+{
+    "WALL": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "DOORWAY": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_ORANGE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_BLUE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYED",
+            "palette": 0
+        }
+    },
+    "SHIFTER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_EGRESS_KEYED",
+            "palette": 0
+        }
+    },
+    "SHIFTER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_INGRESS_KEYED",
+            "palette": 0
+        }
+    },
+    "TOGGLER_ORANGE_CLOSED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_BLUE_CLOSED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "SHIFTER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_EGRESS_KEYLESS",
+            "palette": 0
+        }
+    },
+    "SHIFTER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_INGRESS_KEYLESS",
+            "palette": 0
+        }
+    }
+}

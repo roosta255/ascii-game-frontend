@@ -17,6 +17,7 @@ export class Painter {
             renderers[key] = parseRenderer(value);
         }
 
+        console.log(renderers);
         return new Painter(renderers);
     }
 

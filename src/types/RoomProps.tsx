@@ -34,3 +34,17 @@ export function toFloorGlyphsFromDoor(room: RoomProps, direction: number): [numb
     }
     return toFloorGlyphsFromCell(room, [0, 0]);
 }
+
+export function toFloorGlyphsFromLock(room: RoomProps, direction: number): [number, number] {
+    switch(direction) {
+        case 0:
+            return toFloorGlyphsFromCell(room, [3, -1]);
+        case 1:
+            return toFloorGlyphsFromCell(room, [4, 0]);
+        case 2:
+            return toFloorGlyphsFromCell(room, [3, 5]);
+        case 3:
+            return toFloorGlyphsFromCell(room, [-1, 0]);
+    }
+    return toFloorGlyphsFromCell(room, [0, 0]);
+}

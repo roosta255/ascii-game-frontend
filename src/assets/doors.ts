@@ -4,8 +4,10 @@ export interface DirectionalIconRendererEntry {
 }
 
 export interface DoorRenderer {
-    type: "Unrendered" | "DirectionalIconRenderer";
+    type: "Unrendered" | "DirectionalIconRenderer" | "SpriteRenderer";
     directions?: DirectionalIconRendererEntry[];
+    sprite?: string;
+    palette?: string;
 }
 
 export interface DoorsMeta {

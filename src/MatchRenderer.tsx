@@ -4,11 +4,11 @@ import { Texture } from "./assets/Texture";
 import { Painter } from "./assets/Painter";
 import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
-import { rebuildGlyphs } from "./types/DrawerProps";
+import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { isKeyframeAnimating, Keyframe } from "./types/Keyframe";
 import { CellSize, measureCellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
-import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor } from "./types/RoomProps";
+import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
 import "./MatchRenderer.css";
 
 export interface MatchRendererProps {
@@ -31,6 +31,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [spriteMeta, setSpriteMeta] = useState<any>(null);
   const [rolePainter, setRolePainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
+  const [lockPainter, setLockPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
   const cellSize = useRef<CellSize | null>(null);
@@ -69,6 +70,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     Painter.load(`${import.meta.env.BASE_URL}doors.json`)
       .then(setDoorPainter)
       .catch(err => console.error("❌ Failed to load doors.json:", err));
+
+    Painter.load(`${import.meta.env.BASE_URL}locks.json`)
+      .then(setLockPainter)
+      .catch(err => console.error("❌ Failed to load locks.json:", err));
   }, []);
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     console.log(cellSize.current);
   }, []);
 
-  const isRenderReady = backgroundTexture && spriteMeta && rolePainter && doorPainter && iconsTexture && match;
+  const isRenderReady = backgroundTexture && spriteMeta && rolePainter && doorPainter && lockPainter && iconsTexture && match;
   const isAnimationReady = isRenderReady && cellSize && renderTime;
 
   if (!isAnimationReady) {
@@ -107,7 +112,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     },
   };
 
-  const globals = {
+  const globals: DrawerProps = {
     textures: {
       icons: iconsTexture,
       rooms: backgroundTexture,
@@ -115,8 +120,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     painters: {
       roles: rolePainter,
       doors: doorPainter,
+      locks: lockPainter,
     },
-    roomProps: roomProps,
     glyphs: createBlankCanvas(60, 42),
   };
 
@@ -149,7 +154,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   function drawRoomAt(roomX: number, roomY: number, room: any, roomId: number) {
 
     // TODO: remove global mutation
-    globals.roomProps.position = [roomX, roomY];
+    roomProps.position = [roomX, roomY];
 
     // console.log("Rendering roomid: ", roomId);
 
@@ -267,11 +272,43 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       });
     }
 
+    function setClickableLock(drawX: number, drawY: number, direction: number) {
+      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
+        const moveBody = { account, character: builderOffset, room: roomId, direction };
+        fetch(`/api/match/${match.filename}/activate_lock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(moveBody),
+        })
+          .then(async res => {
+            const bodyText = await res.text();
+            if (!res.ok) {
+              console.info(`❌ HTTP ${res.status} request: `, moveBody);
+              console.error(`❌ HTTP ${res.status} response: `, bodyText);
+              throw new Error(`HTTP ${res.status}`);
+            }
+            try {
+              console.log("✅ Lock success:", JSON.parse(bodyText));
+            } catch {
+              console.warn("⚠️ Non-JSON response:", bodyText);
+            }
+          })
+          .catch(err => console.error("❌ Move failed:", err));
+      });
+    }
+
     for (var i = 0; i < 4; i++) {
-      let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
-      drawCharacterAt(dx, dy, room.walls[i].cell);
-      globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-      setClickableDoorway(dx, dy, i);
+      {
+        let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
+        drawCharacterAt(dx, dy, room.walls[i].cell);
+        globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
+        setClickableDoorway(dx, dy, i);
+      }
+      {
+        let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
+        globals.painters.locks.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
+        setClickableLock(dx, dy, i);
+      }
     }
   }
 

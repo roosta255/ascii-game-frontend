@@ -38,20 +38,24 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
 
   for (var k of keyframes) {
     // animationTime >= k.t0 && animationTime < k.t1
+    function doorOpposite(input: number): number {
+      return (input + 2) % 4;
+    }
+
     function getKeyframeMovement(): [[number, number], [number, number], (before: number, after: number, ratio: number) => number] | null {
       switch(k.animation) {
-        // case "WALKING_FROM_WALL_TO_WALL": return [
-        //   toFloorGlyphsFromDoor(room, k.data[0]),
-        //   toFloorGlyphsFromDoor(room, k.data[2]),
-        //   skip];
+        case "WALKING_FROM_WALL_TO_WALL": return [
+          toFloorGlyphsFromDoor(room, k.data[0]),
+          toFloorGlyphsFromDoor(room, doorOpposite(k.data[2])),
+          skip];
         case "WALKING_FROM_WALL_TO_FLOOR": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
           toFloorGlyphsFromCell(room, [k.data[2], k.data[3]]),
           lerp];
-        // case "WALKING_FROM_FLOOR_TO_WALL": return [
-        //   toFloorGlyphsFromCell(room, [k.data[0], k.data[1]]),
-        //   toFloorGlyphsFromDoor(room, k.data[2]),
-        //   skip];
+        case "WALKING_FROM_FLOOR_TO_WALL": return [
+          toFloorGlyphsFromCell(room, [k.data[0], k.data[1]]),
+          toFloorGlyphsFromDoor(room, doorOpposite(k.data[2])),
+          skip];
         case "WALKING_FROM_FLOOR_TO_FLOOR": return [
           toFloorGlyphsFromCell(room, [k.data[0], k.data[1]]),
           toFloorGlyphsFromCell(room, [k.data[2], k.data[3]]),

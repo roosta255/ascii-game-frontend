@@ -82,7 +82,7 @@ export function parseRenderer(raw: any): Renderer {
         case "CharacterRenderer":
             return { type: "CharacterRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
         case "SpriteRenderer":
-            return { type: "SpriteRenderer", sprite: raw.renderer.layerName, palette: raw.renderer.palette };
+            return { type: "SpriteRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
         default:
             console.warn(`⚠️ Unknown renderer type: ${raw.renderer.type}, defaulting to Unrendered`);
             return { type: "Unrendered" };
