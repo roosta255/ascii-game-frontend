@@ -110,6 +110,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       stride: [6,5],
       size: [5,4],
     },
+    index: viewedRoomId,
   };
 
   const globals: DrawerProps = {

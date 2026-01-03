@@ -5,6 +5,7 @@ export interface Keyframe {
   animation: string;
   t0: number;
   t1: number;
+  room0: number;
   data: number[];
 }
 
@@ -37,6 +38,9 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
   // else, 
 
   for (var k of keyframes) {
+    // skip animations in rooms not rendering:
+
+
     // animationTime >= k.t0 && animationTime < k.t1
     function doorOpposite(input: number): number {
       return (input + 2) % 4;

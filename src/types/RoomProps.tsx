@@ -6,6 +6,7 @@ interface RoomCellProps {
 };
 
 export interface RoomProps {
+    index: number;
     position: [number, number];
     cells: RoomCellProps;
 };
