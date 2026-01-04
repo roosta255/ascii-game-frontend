@@ -134,6 +134,32 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const builderOffset = match.builders[BUILDER_ID].character.offset;
   const times = timeRef.current;
 
+  function autoTurnEnding(isActing: boolean, isMoving: boolean) {
+    const builder = match.builders[BUILDER_ID].character;
+    console.log(builder);
+    if ((isMoving && builder.movesRemaining == 0) || (isActing && builder.actionsRemaining == 0)) {
+      const endTurnBody = { account };
+      fetch(`/api/match/${match.filename}/end_turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(endTurnBody)
+      })
+      .then(async res => {
+        const bodyText = await res.text();
+        if (!res.ok) {
+          console.info(`❌ HTTP ${res.status} request: `, endTurnBody);
+          console.error(`❌ HTTP ${res.status} response: `, bodyText);
+          throw new Error(`HTTP ${res.status}`);
+        }
+        try {
+          console.log("✅ End Turn (auto) success:", JSON.parse(bodyText));
+        } catch {
+          console.warn("⚠️ Non-JSON response:", bodyText);
+        }
+      });
+    }
+  }
+
   function markRegionClickable(
     startX: number,
     startY: number,
@@ -207,6 +233,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
         const moveBody = { account, character: builderOffset, room: roomId, floor };
+        autoTurnEnding(false, true);
         fetch(`/api/match/${match.filename}/move_character`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -275,6 +302,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     function setClickableLock(drawX: number, drawY: number, direction: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
+        autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         fetch(`/api/match/${match.filename}/activate_lock`, {
           method: "POST",
