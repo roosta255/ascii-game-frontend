@@ -102,6 +102,17 @@ export default function MatchPage() {
   if (loading) return <div>Loading match...</div>;
   if (!match || viewedRoomId == null) return <div>Match not found or no room visible.</div>;
 
+  async function refreshMatch() {
+    const res = await fetch(`/api/match/${match.filename}`);
+    if (!res.ok) {
+      console.error("❌ Failed to refresh match:", await res.text());
+      return;
+    }
+
+    const updatedMatch = await res.json();
+    setMatch(updatedMatch); // THIS triggers rerender
+  }
+
   return (
     <div>
       <MatchRenderer
@@ -109,6 +120,7 @@ export default function MatchPage() {
         viewedRoomId={viewedRoomId}
         setViewedRoomId={setViewedRoomId}
         timeRef={timeRef}
+        refreshMatch={refreshMatch}
       />
   
       {match.turners.includes(currentAccount) && (

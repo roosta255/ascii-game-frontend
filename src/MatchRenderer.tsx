@@ -16,6 +16,7 @@ export interface MatchRendererProps {
   viewedRoomId: number;
   setViewedRoomId: (id: number) => void;
   timeRef: TimeRef;
+  refreshMatch: () => Promise<void>;
 }
 
 function getAllCharacters(match: any): any[] {
@@ -26,7 +27,7 @@ function getAllCharacters(match: any): any[] {
   return allCharacters;
 }
 
-export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, timeRef }: MatchRendererProps) {
+export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, timeRef, refreshMatch }: MatchRendererProps) {
   const [backgroundTexture, setBackgroundTexture] = useState<Texture | null>(null);
   const [spriteMeta, setSpriteMeta] = useState<any>(null);
   const [rolePainter, setRolePainter] = useState<Painter | null>(null);
@@ -204,6 +205,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             console.error("Failed to activate character, response:", await response.text());
           } else {
             console.log("Character activated");
+            await refreshMatch();
           }
         } catch (error) {
           console.error("Error activating character:", error);
@@ -245,6 +247,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             }
             try {
               console.log("✅ Move success:", JSON.parse(bodyText));
+              await refreshMatch();
             } catch {
               console.warn("⚠️ Non-JSON response:", bodyText);
             }
@@ -287,6 +290,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
               console.warn("⚠️ Non-JSON response:", bodyText);
             }
 
+            await refreshMatch();
+
             // 🚀 Immediately switch room if doorway leads to adjacent room
             const wall = room.walls[direction];
             if (wall.adjacent != null && wall.adjacent !== viewedRoomId) {
@@ -316,6 +321,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             }
             try {
               console.log("✅ Lock success:", JSON.parse(bodyText));
+              await refreshMatch();
             } catch {
               console.warn("⚠️ Non-JSON response:", bodyText);
             }
