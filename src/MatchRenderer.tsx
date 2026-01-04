@@ -136,7 +136,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   function autoTurnEnding(isActing: boolean, isMoving: boolean) {
     const builder = match.builders[BUILDER_ID].character;
-    console.log(builder);
     if ((isMoving && builder.movesRemaining == 0) || (isActing && builder.actionsRemaining == 0)) {
       const endTurnBody = { account };
       fetch(`/api/match/${match.filename}/end_turn`, {
@@ -182,8 +181,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     // TODO: remove global mutation
     roomProps.position = [roomX, roomY];
-
-    // console.log("Rendering roomid: ", roomId);
 
     function drawCharacterAt(drawX: number, drawY: number, cell: any) {
       const character = cell.offset && offsetMap[cell.offset];
@@ -271,6 +268,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableDoorway(drawX: number, drawY: number, direction: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
         const moveBody = { account, character: builderOffset, room: roomId, direction };
+        autoTurnEnding(false, true);
         fetch(`/api/match/${match.filename}/move_character`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
