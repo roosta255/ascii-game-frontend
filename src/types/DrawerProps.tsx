@@ -5,6 +5,7 @@ import { Texture } from "../assets/Texture";
 interface TextureProps {
     rooms: Texture;
     icons: Texture;
+    minimap: Texture;
 };
 
 interface PainterProps {

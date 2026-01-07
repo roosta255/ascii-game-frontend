@@ -29,6 +29,7 @@ function getAllCharacters(match: any): any[] {
 
 export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, timeRef, refreshMatch }: MatchRendererProps) {
   const [backgroundTexture, setBackgroundTexture] = useState<Texture | null>(null);
+  const [minimapTexture, setMinimapTexture] = useState<Texture | null>(null);
   const [spriteMeta, setSpriteMeta] = useState<any>(null);
   const [rolePainter, setRolePainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
@@ -50,6 +51,16 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           .then(res => res.arrayBuffer())
           .then(loadXp)
           .then(layers => setBackgroundTexture(new Texture(layers[0], meta)))
+      )
+      .catch(err => console.error("❌ Failed to load background:", err));
+
+    fetch(`${import.meta.env.BASE_URL}minimap-5x4.json`)
+      .then(res => res.json())
+      .then(meta =>
+        fetch(`${import.meta.env.BASE_URL}${meta.path}`)
+          .then(res => res.arrayBuffer())
+          .then(loadXp)
+          .then(layers => setMinimapTexture(new Texture(layers[0], meta)))
       )
       .catch(err => console.error("❌ Failed to load background:", err));
 
@@ -77,14 +88,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       .catch(err => console.error("❌ Failed to load locks.json:", err));
   }, []);
 
+  // animation loop
   useEffect(() => {
     let rafId: number;
-
     const tick = () => {
       setRenderTime(performance.now());
       rafId = requestAnimationFrame(tick);
     };
-
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, []);
@@ -95,7 +105,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     console.log(cellSize.current);
   }, []);
 
-  const isRenderReady = backgroundTexture && spriteMeta && rolePainter && doorPainter && lockPainter && iconsTexture && match;
+  const isRenderReady = backgroundTexture && spriteMeta && minimapTexture && rolePainter && doorPainter && lockPainter && iconsTexture && match;
   const isAnimationReady = isRenderReady && cellSize && renderTime;
 
   if (!isAnimationReady) {
@@ -118,13 +128,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     textures: {
       icons: iconsTexture,
       rooms: backgroundTexture,
+      minimap: minimapTexture,
     },
     painters: {
       roles: rolePainter,
       doors: doorPainter,
       locks: lockPainter,
     },
-    glyphs: createBlankCanvas(60, 42),
+    glyphs: createBlankCanvas(80, 42),
   };
 
   const room = match.dungeon.rooms[viewedRoomId];
@@ -346,6 +357,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
   drawRoomAt(0, 0, room, viewedRoomId);
+
+  function drawInventoryAt(offset: [number, number]) {
+    globals.textures.minimap.draw(globals.glyphs, "INVENTORY", offset[0], offset[1], 0);
+  }
+
+  drawInventoryAt([41, 13]);
 
   const animationTime = performance.now() - times.serverToClientOffset
 

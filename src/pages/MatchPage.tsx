@@ -104,13 +104,25 @@ export default function MatchPage() {
 
   async function refreshMatch() {
     const res = await fetch(`/api/match/${match.filename}`);
+
     if (!res.ok) {
       console.error("❌ Failed to refresh match:", await res.text());
       return;
     }
 
-    const updatedMatch = await res.json();
-    setMatch(updatedMatch); // THIS triggers rerender
+    let updatedMatch = await res.json();
+
+    // 🔧 Handle double-encoded JSON
+    if (typeof updatedMatch === "string") {
+      try {
+        updatedMatch = JSON.parse(updatedMatch);
+      } catch (err) {
+        console.error("❌ Match JSON parse failed:", err, updatedMatch);
+        return;
+      }
+    }
+
+    setMatch(updatedMatch); // triggers rerender
   }
 
   return (
