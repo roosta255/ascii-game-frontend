@@ -1,0 +1,9 @@
+{
+    "KEY": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEY",
+            "palette": 0
+        }
+    }
+}

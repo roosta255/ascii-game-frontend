@@ -5,6 +5,7 @@ import { Painter } from "./assets/Painter";
 import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
+import { calculatePosition, GridCalculator } from "./types/GridCalculator";
 import { isKeyframeAnimating, Keyframe } from "./types/Keyframe";
 import { CellSize, measureCellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
@@ -32,6 +33,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [minimapTexture, setMinimapTexture] = useState<Texture | null>(null);
   const [spriteMeta, setSpriteMeta] = useState<any>(null);
   const [rolePainter, setRolePainter] = useState<Painter | null>(null);
+  const [itemPainter, setItemPainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
   const [lockPainter, setLockPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
@@ -79,6 +81,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       .then(setRolePainter)
       .catch(err => console.error("❌ Failed to load roles.json:", err));
 
+    Painter.load(`${import.meta.env.BASE_URL}items.json`)
+      .then(setItemPainter)
+      .catch(err => console.error("❌ Failed to load items.json:", err));
+
     Painter.load(`${import.meta.env.BASE_URL}doors.json`)
       .then(setDoorPainter)
       .catch(err => console.error("❌ Failed to load doors.json:", err));
@@ -105,7 +111,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     console.log(cellSize.current);
   }, []);
 
-  const isRenderReady = backgroundTexture && spriteMeta && minimapTexture && rolePainter && doorPainter && lockPainter && iconsTexture && match;
+  const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && doorPainter && lockPainter && iconsTexture && match;
   const isAnimationReady = isRenderReady && cellSize && renderTime;
 
   if (!isAnimationReady) {
@@ -131,9 +137,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       minimap: minimapTexture,
     },
     painters: {
-      roles: rolePainter,
       doors: doorPainter,
+      items: itemPainter,
       locks: lockPainter,
+      roles: rolePainter,
     },
     glyphs: createBlankCanvas(80, 42),
   };
@@ -143,6 +150,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const offsetMap = Object.fromEntries(getAllCharacters(match).map((c: any) => [c.offset, c]));
   const BUILDER_ID = 0;
   const account = match.builders[BUILDER_ID].player.account;
+  const player = match.builders[BUILDER_ID].player;
   const builderOffset = match.builders[BUILDER_ID].character.offset;
   const times = timeRef.current;
 
@@ -360,6 +368,23 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   function drawInventoryAt(offset: [number, number]) {
     globals.textures.minimap.draw(globals.glyphs, "INVENTORY", offset[0], offset[1], 0);
+    const INVENTORY_WIDTH = 5;
+    const inventoryGrid: GridCalculator = {
+      position: offset,
+      offset: [3, 3],
+      stride: [6, 5],
+    }
+    let i = 0;
+    for (const item of player.inventory.items) {
+      const onClick = async () => {};
+
+      const itemCell: [number, number] = [i % INVENTORY_WIDTH, Math.floor(i / INVENTORY_WIDTH)];
+      const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
+      if (item.type !== "NIL") {
+        globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
+      }
+      i++;
+    }
   }
 
   drawInventoryAt([41, 13]);

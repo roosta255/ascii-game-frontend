@@ -2,6 +2,8 @@
 
 import { Renderer, parseRenderer, RenderContext, render } from "./Renderer";
 
+// Textures map names -> Sprites
+// Painters map names -> Renderers.
 export class Painter {
     renderers: Record<string, Renderer> = {};
 

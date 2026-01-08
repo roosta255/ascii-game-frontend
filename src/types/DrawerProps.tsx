@@ -9,8 +9,9 @@ interface TextureProps {
 };
 
 interface PainterProps {
-    roles: Painter;
     doors: Painter;
+    items: Painter;
+    roles: Painter;
     locks: Painter;
 };
 
