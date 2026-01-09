@@ -376,7 +376,27 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
     let i = 0;
     for (const item of player.inventory.items) {
-      const onClick = async () => {};
+      const onClick = !item.isActionable ? undefined : async () => {
+        try {
+          const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index };
+          const response = await fetch(`/api/match/${match.filename}/activate_inventory_item`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(activateBody),
+          });
+          if (!response.ok) {
+            console.warn(`Failed to activate inventory item, body: ${activateBody}`);
+            console.error("Failed to activate inventory item, response:", await response.text());
+          } else {
+            console.log("Inventory item activated");
+            await refreshMatch();
+          }
+        } catch (error) {
+          console.error("Error activating inventory item:", error);
+        }
+      };
 
       const itemCell: [number, number] = [i % INVENTORY_WIDTH, Math.floor(i / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
