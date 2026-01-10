@@ -408,6 +408,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   drawRoomAt(0, 0, room, viewedRoomId);
 
   function drawInventoryAt(offset: [number, number]) {
+    if (player.inventory.isEmpty) {
+      return;
+    }
     globals.textures.minimap.draw(globals.glyphs, "INVENTORY", offset[0], offset[1], 0);
     const INVENTORY_WIDTH = 5;
     const inventoryGrid: GridCalculator = {
@@ -443,7 +446,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
       if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
-        console.log(item);
       }
     }
   }
