@@ -85,6 +85,62 @@
             ]
         }
     },
+    "JAILER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
+    "JAILER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
+    "JAILER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
     "KEEPER_EGRESS_KEYLESS": {
         "renderer": {
             "type": "DoorRenderer",

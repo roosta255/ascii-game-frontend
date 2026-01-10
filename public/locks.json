@@ -24,6 +24,30 @@
             "type": "Unrendered"
         }
     },
+    "JAILER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYED",
+            "palette": 0
+        }
+    },
+    "JAILER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYLESS",
+            "palette": 0
+        }
+    },
     "KEEPER_INGRESS_KEYED": {
         "renderer": {
             "type": "SpriteRenderer",
