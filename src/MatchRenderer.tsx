@@ -154,29 +154,45 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const builderOffset = match.builders[BUILDER_ID].character.offset;
   const times = timeRef.current;
 
-  function autoTurnEnding(isActing: boolean, isMoving: boolean) {
+  async function autoTurnEnding(
+    isActing: boolean,
+    isMoving: boolean
+  ): Promise<boolean> {
     const builder = match.builders[BUILDER_ID].character;
-    if ((isMoving && builder.movesRemaining == 0) || (isActing && builder.actionsRemaining == 0)) {
-      const endTurnBody = { account };
-      fetch(`/api/match/${match.filename}/end_turn`, {
+
+    const shouldEndTurn =
+      (isMoving && builder.movesRemaining === 0) ||
+      (isActing && builder.actionsRemaining === 0);
+
+    if (!shouldEndTurn) {
+      return false;
+    }
+
+    const endTurnBody = { account };
+
+    const res = await fetch(
+      `/api/match/${match.filename}/end_turn`,
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(endTurnBody)
-      })
-      .then(async res => {
-        const bodyText = await res.text();
-        if (!res.ok) {
-          console.info(`❌ HTTP ${res.status} request: `, endTurnBody);
-          console.error(`❌ HTTP ${res.status} response: `, bodyText);
-          throw new Error(`HTTP ${res.status}`);
-        }
-        try {
-          console.log("✅ End Turn (auto) success:", JSON.parse(bodyText));
-        } catch {
-          console.warn("⚠️ Non-JSON response:", bodyText);
-        }
-      });
+        body: JSON.stringify(endTurnBody),
+      }
+    );
+
+    const bodyText = await res.text();
+
+    if (!res.ok) {
+      console.info(`❌ HTTP ${res.status} request: `, endTurnBody);
+      console.error(`❌ HTTP ${res.status} response: `, bodyText);
+      throw new Error(`End turn failed (${res.status})`);
     }
+
+    // Only refresh if the end turn succeeded
+    await refreshMatch();
+
+    console.log("✅ End Turn (auto) success");
+
+    return true;
   }
 
   function markRegionClickable(
@@ -207,8 +223,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       if (!character) return;
       // animations check
 
-      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, times.fetchTime)) !== undefined) return;
-      const onClick = async () => {
+      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) return;
+      const onClick = !character.isActionable ? undefined : async () => {
+        await autoTurnEnding(true, false);
         try {
           const subject = character.isObject ? builderOffset : cell.offset;
           const activateBody = { account, room: roomId, character: cell.offset, target: subject };
@@ -249,29 +266,49 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const CELL_SIZE_Y = 4;
 
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
-      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
-        const moveBody = { account, character: builderOffset, room: roomId, floor };
-        autoTurnEnding(false, true);
-        fetch(`/api/match/${match.filename}/move_character`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(moveBody),
-        })
-          .then(async res => {
-            const bodyText = await res.text();
-            if (!res.ok) {
-              console.info(`❌ HTTP ${res.status} request: `, moveBody);
-              console.error(`❌ HTTP ${res.status} response: `, bodyText);
-              throw new Error(`HTTP ${res.status}`);
+      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        try {
+          const moveBody = {
+            account,
+            character: builderOffset,
+            room: roomId,
+            floor,
+          };
+
+          // 1️⃣ End turn (refresh happens inside if needed)
+          await autoTurnEnding(false, true);
+
+          // 2️⃣ Move character (WAIT for it)
+          const res = await fetch(
+            `/api/match/${match.filename}/move_character`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(moveBody),
             }
-            try {
-              console.log("✅ Move success:", JSON.parse(bodyText));
-              await refreshMatch();
-            } catch {
-              console.warn("⚠️ Non-JSON response:", bodyText);
-            }
-          })
-          .catch(err => console.error("❌ Move failed:", err));
+          );
+
+          const bodyText = await res.text();
+
+          if (!res.ok) {
+            console.info(`❌ HTTP ${res.status} request:`, moveBody);
+            console.error(`❌ HTTP ${res.status} response:`, bodyText);
+            throw new Error(`HTTP ${res.status}`);
+          }
+
+          // 3️⃣ Parse JSON only if it actually is JSON
+          if (bodyText.trim().startsWith("{") || bodyText.trim().startsWith("[")) {
+            console.log("✅ Move success:", JSON.parse(bodyText));
+          } else {
+            console.log("✅ Move success (non-JSON):", bodyText);
+          }
+
+          // 4️⃣ Refresh AFTER move completes
+          await refreshMatch();
+
+        } catch (err) {
+          console.error("❌ Floor move failed:", err);
+        }
       });
     }
 
@@ -288,9 +325,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
 
     function setClickableDoorway(drawX: number, drawY: number, direction: number) {
-      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
+      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         const moveBody = { account, character: builderOffset, room: roomId, direction };
-        autoTurnEnding(false, true);
+        await autoTurnEnding(false, true);
         fetch(`/api/match/${match.filename}/move_character`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -323,8 +360,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
 
     function setClickableLock(drawX: number, drawY: number, direction: number) {
-      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, () => {
-        autoTurnEnding(true, false);
+      markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        await autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         fetch(`/api/match/${match.filename}/activate_lock`, {
           method: "POST",
@@ -354,12 +391,16 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
         drawCharacterAt(dx, dy, room.walls[i].cell);
         globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-        setClickableDoorway(dx, dy, i);
+        if (!room.walls[i].isBlocking && !room.walls[i].isDoorActionable) {
+          setClickableDoorway(dx, dy, i);
+        }
       }
       {
         let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
         globals.painters.locks.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-        setClickableLock(dx, dy, i);
+        if (room.walls[i].isLockActionable) {
+          setClickableLock(dx, dy, i);
+        }
       }
     }
   }
@@ -374,9 +415,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       offset: [3, 3],
       stride: [6, 5],
     }
-    let i = 0;
     for (const item of player.inventory.items) {
       const onClick = !item.isActionable ? undefined : async () => {
+        await autoTurnEnding(true, false);
         try {
           const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index };
           const response = await fetch(`/api/match/${match.filename}/activate_inventory_item`, {
@@ -398,12 +439,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         }
       };
 
-      const itemCell: [number, number] = [i % INVENTORY_WIDTH, Math.floor(i / INVENTORY_WIDTH)];
+      const itemCell: [number, number] = [item.index % INVENTORY_WIDTH, Math.floor(item.index / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
       if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
+        console.log(item);
       }
-      i++;
     }
   }
 
