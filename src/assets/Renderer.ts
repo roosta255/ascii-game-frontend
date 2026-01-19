@@ -1,7 +1,6 @@
 // src/systems/RendererSystem.ts — Refactored to remove if-chains using function mapping for TypeScript polymorphism
 
-import { Texture } from "./Texture";
-import { AsciiGlyph } from "../types/AsciiGlyph";
+import { DrawerProps } from "../types/DrawerProps";
 
 export interface DirectionalIconRendererEntry {
     sprite: string;
@@ -10,22 +9,19 @@ export interface DirectionalIconRendererEntry {
 
 export type Renderer =
     | { type: "Unrendered" }
-    | { type: "DirectionalIconRenderer"; directions: DirectionalIconRendererEntry[] }
+    | { type: "BackgroundRenderer"; sprite: string; palette: number }
     | { type: "CharacterRenderer"; sprite: string; palette: number }
+    | { type: "DirectionalIconRenderer"; directions: DirectionalIconRendererEntry[] }
+    | { type: "DoorwayRenderer"; sprite: string }
     | { type: "SpriteRenderer"; sprite: string; palette: number };
 
 export interface RenderContext {
-    globals: {
-        textures: {
-            icons: Texture;
-            rooms: Texture;
-        };
-        glyphs: AsciiGlyph[][];
-    };
+    globals: DrawerProps;
     locals: {
         coords: [number, number];
         direction?: number;
         onClick?: () => void;
+        room?: any;
     };
 }
 
@@ -52,6 +48,27 @@ const rendererHandlers: Record<string, RendererHandler> = {
     "SpriteRenderer": (renderer, ctx) => {
         const r = renderer as any;
         ctx.globals.textures.icons.draw(ctx.globals.glyphs, r.sprite, ctx.locals.coords[0], ctx.locals.coords[1], r.palette, ctx.locals.onClick);
+    },
+
+    "BackgroundRenderer": (renderer, ctx) => {
+        const r = renderer as any;
+        // r.sprite = "RECT_4_x_5_BACKGROUND";
+        r.palette = 16;
+        console.log(r);
+        ctx.globals.textures.rooms.draw(ctx.globals.glyphs, r.sprite, ctx.locals.coords[0], ctx.locals.coords[1], r.palette, ctx.locals.onClick);
+    },
+
+    "DoorwayRenderer": (renderer, ctx) => {
+        const entry = renderer as any;
+        const DOOR_PALETTE_OFFSET = 1;
+        const room = ctx.locals.room;
+        const doorPalette = DOOR_PALETTE_OFFSET +
+            (room.walls[0].isDoorway ? 1 : 0) +
+            (room.walls[1].isDoorway ? 2 : 0) +
+            (room.walls[2].isDoorway ? 4 : 0) +
+            (room.walls[3].isDoorway ? 8 : 0);
+
+        ctx.globals.textures.rooms.draw(ctx.globals.glyphs, entry.sprite, ctx.locals.coords[0], ctx.locals.coords[1], doorPalette, ctx.locals.onClick);
     }
 };
 
@@ -77,8 +94,12 @@ export function parseRenderer(raw: any): Renderer {
     switch (raw.renderer.type) {
         case "Unrendered":
             return { type: "Unrendered" };
+        case "BackgroundRenderer": 
+            return { type: "BackgroundRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
         case "DoorRenderer":
             return { type: "DoorRenderer", directions: raw.renderer.directions };
+        case "DoorwayRenderer":
+            return { type: "DoorwayRenderer", sprite: raw.renderer.sprite };
         case "CharacterRenderer":
             return { type: "CharacterRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
         case "SpriteRenderer":

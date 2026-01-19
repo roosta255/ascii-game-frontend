@@ -13,6 +13,8 @@ interface PainterProps {
     items: Painter;
     roles: Painter;
     locks: Painter;
+    backgrounds: Painter;
+    doorways: Painter;
 };
 
 export interface DrawerProps {

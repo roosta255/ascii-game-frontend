@@ -1,0 +1,38 @@
+{
+    "LIGHTNING_ROD": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "RECT_4_x_1_DOORWAYS"
+        }
+    },
+    "POWER_GENERATOR": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "POWER_GENERATOR_DOORWAYS"
+        }
+    },
+    "RECT_2_x_5": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "RECT_2_x_5_DOORWAYS"
+        }
+    },
+    "RECT_4_x_5": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "RECT_4_x_5_DOORWAYS"
+        }
+    },
+    "RECT_4_x_1": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "RECT_4_x_1_DOORWAYS"
+        }
+    },
+    "RECT_3_x_3": {
+        "renderer": {
+            "type": "DoorwayRenderer",
+            "sprite": "RECT_3_x_3_DOORWAYS"
+        }
+    }
+}

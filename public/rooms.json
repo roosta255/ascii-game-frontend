@@ -1,0 +1,62 @@
+{
+    "LIGHTNING_ROD": {
+        "offset": [8,28],
+        "stride": [6,5],
+        "walls": [
+            { "door": { "offset": [17,6] }, "lock": { "offset": [17, 23] } },
+            { "door": { "offset": [32, 28] } },
+            { "door": { "offset": [17, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 28] } }
+        ]
+    },
+    "POWER_GENERATOR": {
+        "offset": [8, 8],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [11, 3] } },
+            { "door": { "offset": [32, 23] } },
+            { "door": { "offset": [14, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 18] }, "lock": { "offset": [2,8] } }
+        ]
+    }, 
+    "RECT_2_x_5": {
+        "offset": [14, 8],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17, 3] } },
+            { "door": { "offset": [26, 18] }, "lock": { "offset": [26,8] } },
+            { "door": { "offset": [17, 33] } },
+            { "door": { "offset": [8, 18] }, "lock": { "offset": [8,8] } }
+        ]
+    },
+    "RECT_4_x_5": {
+        "offset": [8, 8],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [14, 3] }, "lock": { "offset": [26,3] } },
+            { "door": { "offset": [32, 18] }, "lock": { "offset": [32,8] } },
+            { "door": { "offset": [14, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 18] }, "lock": { "offset": [2,8] } }
+        ]
+    },
+    "RECT_4_x_1": {
+        "offset": [8, 28],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17, 23] }, "lock": { "offset": [26,23] } },
+            { "door": { "offset": [32, 28] } },
+            { "door": { "offset": [17, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 28] } }
+        ]
+    },
+    "RECT_3_x_3": {
+        "offset": [11, 11],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17, 3] } },
+            { "door": { "offset": [29, 14] } },
+            { "door": { "offset": [17, 23] } },
+            { "door": { "offset": [5, 13] } }
+        ]
+    }
+}

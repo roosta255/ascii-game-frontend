@@ -9,7 +9,7 @@ import { calculatePosition, GridCalculator } from "./types/GridCalculator";
 import { isKeyframeAnimating, Keyframe } from "./types/Keyframe";
 import { CellSize, measureCellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
-import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
+import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
 import "./MatchRenderer.css";
 
 export interface MatchRendererProps {
@@ -36,6 +36,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [itemPainter, setItemPainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
   const [lockPainter, setLockPainter] = useState<Painter | null>(null);
+  const [roomPropLoader, setRoomPropLoader] = useState<RoomPropLoader | null>(null);
+  const [doorwayPainter, setDoorwayPainter] = useState<Painter | null>(null);
+  const [backgroundPainter, setBackgroundPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
   const cellSize = useRef<CellSize | null>(null);
@@ -77,6 +80,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       })
       .catch(err => console.error("❌ Failed to load icons:", err));
 
+    RoomPropLoader.load(`${import.meta.env.BASE_URL}rooms.json`)
+      .then(setRoomPropLoader)
+      .catch(err => console.error("❌ Failed to load rooms.json:", err));
+
     Painter.load(`${import.meta.env.BASE_URL}roles.json`)
       .then(setRolePainter)
       .catch(err => console.error("❌ Failed to load roles.json:", err));
@@ -84,6 +91,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     Painter.load(`${import.meta.env.BASE_URL}items.json`)
       .then(setItemPainter)
       .catch(err => console.error("❌ Failed to load items.json:", err));
+
+    Painter.load(`${import.meta.env.BASE_URL}backgrounds.json`)
+      .then(setBackgroundPainter)
+      .catch(err => console.error("❌ Failed to load backgrounds.json:", err));
+
+    Painter.load(`${import.meta.env.BASE_URL}doorways.json`)
+      .then(setDoorwayPainter)
+      .catch(err => console.error("❌ Failed to load doorways.json:", err));
 
     Painter.load(`${import.meta.env.BASE_URL}doors.json`)
       .then(setDoorPainter)
@@ -111,7 +126,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     console.log(cellSize.current);
   }, []);
 
-  const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && doorPainter && lockPainter && iconsTexture && match;
+  const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && roomPropLoader && doorPainter && lockPainter && doorwayPainter && backgroundPainter && iconsTexture && match;
   const isAnimationReady = isRenderReady && cellSize && renderTime;
 
   if (!isAnimationReady) {
@@ -120,13 +135,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       </div>);
   }
 
+  const room = match.dungeon.rooms[viewedRoomId];
+
   const roomProps: RoomProps = {
     position: [0,0],
-    cells: {
-      offset: [8,8],
-      stride: [6,5],
-      size: [5,4],
-    },
+    cells: roomPropLoader.getProps(room.type),
+    size: [room.width, room.height],
     index: viewedRoomId,
   };
 
@@ -141,11 +155,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       items: itemPainter,
       locks: lockPainter,
       roles: rolePainter,
+      backgrounds: backgroundPainter,
+      doorways: doorwayPainter,
     },
     glyphs: createBlankCanvas(80, 42),
   };
 
-  const room = match.dungeon.rooms[viewedRoomId];
+  
   // console.log("🧭 Rendering room ID:", viewedRoomId, room);
   const offsetMap = Object.fromEntries(getAllCharacters(match).map((c: any) => [c.offset, c]));
   const BUILDER_ID = 0;
@@ -253,14 +269,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       rolePainter.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick}});
     }
 
-    globals.textures.rooms.draw(globals.glyphs, "BOARD", roomX, roomY, 16);
-    const DOOR_PALETTE_OFFSET = 1;
-    const doorPalette = DOOR_PALETTE_OFFSET +
-      (room.walls[0].isDoorway ? 1 : 0) +
-      (room.walls[1].isDoorway ? 2 : 0) +
-      (room.walls[2].isDoorway ? 4 : 0) +
-      (room.walls[3].isDoorway ? 8 : 0);
-    globals.textures.rooms.draw(globals.glyphs, "DOORWAY", roomX, roomY, doorPalette);
+    globals.painters.backgrounds.draw(room.type, {globals, locals: {coords: [roomX, roomY], room}});
+    globals.painters.doorways.draw(room.type, {globals, locals: {coords: [roomX, roomY], room}});
 
     const CELL_SIZE_X = 5;
     const CELL_SIZE_Y = 4;
