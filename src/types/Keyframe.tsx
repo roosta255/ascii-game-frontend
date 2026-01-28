@@ -54,15 +54,15 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
           skip];
         case "WALKING_FROM_WALL_TO_FLOOR": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
-          toFloorGlyphsFromCell(room, [k.data[2], k.data[3]]),
+          toFloorGlyphsFromCell(room, k.data[2]),
           lerp];
         case "WALKING_FROM_FLOOR_TO_WALL": return [
-          toFloorGlyphsFromCell(room, [k.data[0], k.data[1]]),
+          toFloorGlyphsFromCell(room, k.data[0]),
           toFloorGlyphsFromDoor(room, doorOpposite(k.data[2])),
           skip];
         case "WALKING_FROM_FLOOR_TO_FLOOR": return [
-          toFloorGlyphsFromCell(room, [k.data[0], k.data[1]]),
-          toFloorGlyphsFromCell(room, [k.data[2], k.data[3]]),
+          toFloorGlyphsFromCell(room, k.data[0]),
+          toFloorGlyphsFromCell(room, k.data[2]),
           lerp];
       }
       return null;

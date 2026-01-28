@@ -324,7 +324,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     var i = 0;
     for (const cell of room.floorCells) {
-      const [drawX, drawY] = toFloorGlyphsFromCell(roomProps, [cell.x, cell.y]);
+      const [drawX, drawY] = toFloorGlyphsFromCell(roomProps, i);
       const character = cell.offset && offsetMap[cell.offset];
       if (!character) {
         setClickableFloor(drawX, drawY, i);
@@ -334,11 +334,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       i++;
     }
 
-    function setClickableDoorway(drawX: number, drawY: number, direction: number) {
+    function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         await autoTurnEnding(false, true);
-        fetch(`/api/match/${match.filename}/move_character`, {
+        fetch(`/api/match/${match.filename}/${route}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(moveBody),
@@ -360,7 +360,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
             // 🚀 Immediately switch room if doorway leads to adjacent room
             const wall = room.walls[direction];
-            if (wall.adjacent != null && wall.adjacent !== viewedRoomId) {
+            if (route === "move_character" && wall.adjacent != null && wall.adjacent !== viewedRoomId) {
               console.log(`🚪 Moving view to adjacent room ${wall.adjacent}`);
               setViewedRoomId(wall.adjacent);
             }
@@ -401,8 +401,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
         drawCharacterAt(dx, dy, room.walls[i].cell);
         globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-        if (!room.walls[i].isBlocking && !room.walls[i].isDoorActionable) {
-          setClickableDoorway(dx, dy, i);
+        if (room.walls[i].isDoorActionable) {
+          setClickableDoorway(dx, dy, i, "activate_door");
+        }
+        else if (!room.walls[i].isBlocking) {
+          setClickableDoorway(dx, dy, i, "move_character");
         }
       }
       {

@@ -1,10 +1,5 @@
 {
-    "LIGHTNING_ROD": {
-        "renderer": {
-            "type": "DoorwayRenderer",
-            "sprite": "RECT_4_x_1_DOORWAYS"
-        }
-    },
+    "LIGHTNING_ROD": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_4_x_1_DOORWAYS" } },
     "POWER_GENERATOR": {
         "renderer": {
             "type": "DoorwayRenderer",
@@ -23,6 +18,8 @@
             "sprite": "RECT_4_x_5_DOORWAYS"
         }
     },
+    "TIME_GATE_TO_FUTURE": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_4_x_5_DOORWAYS" } },
+    "TIME_GATE_TO_PAST": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_4_x_5_DOORWAYS" } },
     "RECT_4_x_1": {
         "renderer": {
             "type": "DoorwayRenderer",

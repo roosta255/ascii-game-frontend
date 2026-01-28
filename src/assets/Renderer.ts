@@ -54,7 +54,6 @@ const rendererHandlers: Record<string, RendererHandler> = {
         const r = renderer as any;
         // r.sprite = "RECT_4_x_5_BACKGROUND";
         r.palette = 16;
-        console.log(r);
         ctx.globals.textures.rooms.draw(ctx.globals.glyphs, r.sprite, ctx.locals.coords[0], ctx.locals.coords[1], r.palette, ctx.locals.onClick);
     },
 

@@ -1,4 +1,24 @@
 {
+    "TIME_GATE_TO_FUTURE": {
+        "offset": [8, 13],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17,6] }, "lock": { "offset": [29,5] } },
+            { "door": { "offset": [32, 18] }, "lock": { "offset": [32,8] } },
+            { "door": { "offset": [14, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 18] }, "lock": { "offset": [2,8] } }
+        ]
+    },
+    "TIME_GATE_TO_PAST": {
+        "offset": [8, 13],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17,6] }, "lock": { "offset": [29,5] } },
+            { "door": { "offset": [32, 18] }, "lock": { "offset": [32,8] } },
+            { "door": { "offset": [14, 33] }, "lock": { "offset": [26,33] } },
+            { "door": { "offset": [2, 18] }, "lock": { "offset": [2,8] } }
+        ]
+    },
     "LIGHTNING_ROD": {
         "offset": [8,28],
         "stride": [6,5],
@@ -18,7 +38,7 @@
             { "door": { "offset": [14, 33] }, "lock": { "offset": [26,33] } },
             { "door": { "offset": [2, 18] }, "lock": { "offset": [2,8] } }
         ]
-    }, 
+    },
     "RECT_2_x_5": {
         "offset": [14, 8],
         "stride": [6, 5],

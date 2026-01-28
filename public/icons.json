@@ -53,6 +53,8 @@
         "SHIFTER_EGRESS_KEYLESS": [2,3],
         "SHIFTER_EGRESS_KEYED": [3,3],
         "MISSING": [11,16],
+        "CUBE": [14,16],
+        "CUBE_SLOT": [15,16],
         "BUILDER": [13,3]
     },
     "spritesWithHorizontalFlip": {

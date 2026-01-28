@@ -14,7 +14,7 @@
             "type": "CharacterRenderer",
             "palette": 3,
             "eyes": 3,
-            "sprite": "WAMU",
+            "sprite": "SATYR",
             "bleedable": false,
             "sleepable": false
         }

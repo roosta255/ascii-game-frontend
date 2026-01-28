@@ -5,5 +5,19 @@
             "sprite": "KEY",
             "palette": 0
         }
+    },
+    "CUBE_AWAKENED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "CUBE",
+            "palette": 5
+        }
+    },
+    "CUBE_DORMANT": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "CUBE",
+            "palette": 2
+        }
     }
 }

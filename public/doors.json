@@ -4,6 +4,13 @@
             "type": "Unrendered"
         }
     },
+    "WALL_ALLOCATED": { "renderer": { "type": "Unrendered" } },
+    "LIGHTNING_ROD_AWAKENED": { "renderer": { "type": "Unrendered" } },
+    "LIGHTNING_ROD_DORMANT": { "renderer": { "type": "Unrendered" } },
+    "LIGHTNING_ROD_EMPTY": { "renderer": { "type": "Unrendered" } },
+    "TIME_GATE_AWAKENED": { "renderer": { "type": "Unrendered" } },
+    "TIME_GATE_DORMANT": { "renderer": { "type": "Unrendered" } },
+    "TIME_GATE_EMPTY": { "renderer": { "type": "Unrendered" } },
     "DOORWAY": {
         "renderer": {
             "type": "Unrendered"

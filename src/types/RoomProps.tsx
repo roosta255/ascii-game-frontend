@@ -11,8 +11,9 @@ export interface RoomProps {
     cells: RoomCellProps;
 };
 
-export function toFloorGlyphsFromCell(room: RoomProps, cell: [number, number]): [number, number] {
-    const [cellX, cellY] = cell;
+export function toFloorGlyphsFromCell(room: RoomProps, floorId: number): [number, number] {
+    const cellX = floorId % room.size[0];
+    const cellY = Math.floor(floorId / room.size[0]);
     const [offsetX, offsetY] = room.cells.offset;
     const [strideX, strideY] = room.cells.stride;
     const [positionX, positionY] = room.position;
