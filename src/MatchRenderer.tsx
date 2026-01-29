@@ -334,7 +334,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       i++;
     }
 
-    function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string) {
+    function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string, nextViewedRoomId?: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         await autoTurnEnding(false, true);
@@ -360,9 +360,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
             // 🚀 Immediately switch room if doorway leads to adjacent room
             const wall = room.walls[direction];
-            if (route === "move_character" && wall.adjacent != null && wall.adjacent !== viewedRoomId) {
-              console.log(`🚪 Moving view to adjacent room ${wall.adjacent}`);
-              setViewedRoomId(wall.adjacent);
+            if (nextViewedRoomId !== undefined) {
+              console.log(`🚪 Moving view to room ${nextViewedRoomId}`);
+              setViewedRoomId(nextViewedRoomId);
             }
           })
           .catch(err => console.error("❌ Move failed:", err));
@@ -402,10 +402,39 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         drawCharacterAt(dx, dy, room.walls[i].cell);
         globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
         if (room.walls[i].isDoorActionable) {
-          setClickableDoorway(dx, dy, i, "activate_door");
+          let nextViewedRoomId: number | undefined;
+
+          switch (room.walls[i].door) {
+            case "LADDER_1_BOTTOM":
+            case "POLE_1_BOTTOM":
+              nextViewedRoomId = room.above;
+              break;
+
+            case "LADDER_1_TOP":
+            case "POLE_1_TOP":
+              nextViewedRoomId = room.below;
+              break;
+
+            case "TIME_GATE_AWAKENED":
+              switch (room.type) {
+                case "TIME_GATE_TO_FUTURE":
+                  nextViewedRoomId = room.posterior;
+                  break;
+
+                case "TIME_GATE_TO_PAST":
+                  nextViewedRoomId = room.anterior;
+                  break;
+              }
+            default:
+              nextViewedRoomId = undefined;
+          }
+
+
+
+          setClickableDoorway(dx, dy, i, "activate_door", nextViewedRoomId);
         }
         else if (!room.walls[i].isBlocking) {
-          setClickableDoorway(dx, dy, i, "move_character");
+          setClickableDoorway(dx, dy, i, "move_character", room.walls[i].adjacent);
         }
       }
       {

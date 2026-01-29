@@ -7,6 +7,10 @@
     "TIME_GATE_AWAKENED": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 5 } },
     "TIME_GATE_DORMANT": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 2 } },
     "TIME_GATE_EMPTY": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE_SLOT", "palette": 0 } },
+    "LADDER_1_BOTTOM": { "renderer": { "type": "Unrendered" } },
+    "LADDER_1_TOP": { "renderer": { "type": "Unrendered" } },
+    "POLE_1_BOTTOM": { "renderer": { "type": "Unrendered" } },
+    "POLE_1_TOP": { "renderer": { "type": "Unrendered" } },
     "DOORWAY": {
         "renderer": {
             "type": "Unrendered"
