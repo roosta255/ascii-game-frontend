@@ -39,7 +39,7 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
 
   for (var k of keyframes) {
     // skip animations in rooms not rendering:
-
+    // if (k.room0 !== room.index) continue;
 
     // animationTime >= k.t0 && animationTime < k.t1
     function doorOpposite(input: number): number {
@@ -50,16 +50,16 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       switch(k.animation) {
         case "WALKING_FROM_WALL_TO_WALL": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
-          toFloorGlyphsFromDoor(room, doorOpposite(k.data[2])),
-          skip];
+          toFloorGlyphsFromDoor(room, k.data[2]),
+          lerp];
         case "WALKING_FROM_WALL_TO_FLOOR": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
           toFloorGlyphsFromCell(room, k.data[2]),
           lerp];
         case "WALKING_FROM_FLOOR_TO_WALL": return [
           toFloorGlyphsFromCell(room, k.data[0]),
-          toFloorGlyphsFromDoor(room, doorOpposite(k.data[2])),
-          skip];
+          toFloorGlyphsFromDoor(room, k.data[2]),
+          lerp];
         case "WALKING_FROM_FLOOR_TO_FLOOR": return [
           toFloorGlyphsFromCell(room, k.data[0]),
           toFloorGlyphsFromCell(room, k.data[2]),
@@ -81,6 +81,7 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       digest.t0 = k.t0;
       digest.t1 = k.t1;
       digest.curve = curve;
+      console.log(movement);
     }
 
   }

@@ -31,10 +31,6 @@
         "GAGGER": [11,10],
         "CHELICER": [16,4],
         "TRIE": [13,4],
-        "LADDER_BOTTOM": [13,17],
-        "LADDER_TOP": [13,18],
-        "POLE_TOP": [12,17],
-        "POLE_BOTTOM": [11,17],
         "DOOR_POWER_EAST": [8,10],
         "DOOR_POWER_NORTH": [7,10],
         "DOOR_EMERGENCY_EAST": [13,16],
@@ -52,6 +48,14 @@
         "JAILER_KEYED_BROKEN": [1,10],
         "KEEPER_KEYLESS": [4,3],
         "KEEPER_KEYED": [5,3],
+        "LADDER_BOTTOM_NORTH": [13,17],
+        "LADDER_BOTTOM_WEST": [14,17],
+        "LADDER_TOP_EAST": [14,17],
+        "LADDER_TOP_SOUTH": [13,17],
+        "POLE_BOTTOM_NORTH": [11,17],
+        "POLE_BOTTOM_WEST": [12,18],
+        "POLE_TOP_NORTH": [12,17],
+        "POLE_TOP_WEST": [11,18],
         "SHIFTER_INGRESS_KEYLESS": [2,2],
         "SHIFTER_INGRESS_KEYED": [3,2],
         "SHIFTER_EGRESS_KEYLESS": [2,3],
@@ -67,7 +71,11 @@
         "DOOR_TOGGLER_WEST": [0,12],
         "DOOR_GRILLE_WEST": [6,10],
         "DOOR_PALISADE_WEST": [2,12],
-        "DOOR_DOORKNOB_WEST": [4,11]
+        "DOOR_DOORKNOB_WEST": [4,11],
+        "POLE_BOTTOM_EAST": [12,18],
+        "POLE_TOP_EAST": [11,18],
+        "LADDER_BOTTOM_EAST": [14,17],
+        "LADDER_TOP_WEST": [14,17]
     },
     "spritesWithVerticalFlip": {
         "DOOR_POWER_SOUTH": [7,10],
@@ -75,7 +83,11 @@
         "DOOR_TOGGLER_SOUTH": [1,12],
         "DOOR_GRILLE_SOUTH": [5,10],
         "DOOR_PALISADE_SOUTH": [1,13],
-        "DOOR_DOORKNOB_SOUTH": [1,11]
+        "DOOR_DOORKNOB_SOUTH": [1,11],
+        "LADDER_TOP_NORTH": [13,17],
+        "LADDER_BOTTOM_SOUTH": [13,17],
+        "POLE_BOTTOM_SOUTH": [12,17],
+        "POLE_TOP_SOUTH": [12,17]
     },
     "spritesWithHorizontalAndVerticalFlip": {}
 }

@@ -11,10 +11,10 @@
     "TIME_GATE_AWAKENED": { "renderer": { "type": "Unrendered" } },
     "TIME_GATE_DORMANT": { "renderer": { "type": "Unrendered" } },
     "TIME_GATE_EMPTY": { "renderer": { "type": "Unrendered" } },
-    "LADDER_1_BOTTOM": { "renderer": { "type": "SpriteRenderer", "sprite": "LADDER_BOTTOM", "palette": 0 } },
-    "LADDER_1_TOP": { "renderer": { "type": "SpriteRenderer", "sprite": "LADDER_TOP", "palette": 0 } },
-    "POLE_1_BOTTOM": { "renderer": { "type": "SpriteRenderer", "sprite": "POLE_BOTTOM", "palette": 0 } },
-    "POLE_1_TOP": { "renderer": { "type": "SpriteRenderer", "sprite": "POLE_TOP", "palette": 0 } },
+    "LADDER_1_BOTTOM": { "renderer": {"type": "DoorRenderer","directions": [{"sprite": "LADDER_BOTTOM_NORTH","palette": 0},{"sprite": "LADDER_BOTTOM_EAST","palette": 0},{"sprite": "LADDER_BOTTOM_SOUTH","palette": 0},{"sprite": "LADDER_BOTTOM_WEST","palette": 0}]} },
+    "LADDER_1_TOP": { "renderer": { "type": "DoorRenderer","directions": [{"sprite": "LADDER_TOP_NORTH","palette": 0},{"sprite": "LADDER_TOP_EAST","palette": 0},{"sprite": "LADDER_TOP_SOUTH","palette": 0},{"sprite": "LADDER_TOP_WEST","palette": 0}]} },
+    "POLE_1_BOTTOM": { "renderer": { "type": "DoorRenderer","directions": [{"sprite": "POLE_BOTTOM_NORTH","palette": 0},{"sprite": "POLE_BOTTOM_EAST","palette": 0},{"sprite": "POLE_BOTTOM_SOUTH","palette": 0},{"sprite": "POLE_BOTTOM_WEST","palette": 0}]} },
+    "POLE_1_TOP": { "renderer": { "type": "DoorRenderer","directions": [{"sprite": "POLE_TOP_NORTH","palette": 0},{"sprite": "POLE_TOP_EAST","palette": 0},{"sprite": "POLE_TOP_SOUTH","palette": 0},{"sprite": "POLE_TOP_WEST","palette": 0}]} },
     "DOORWAY": {
         "renderer": {
             "type": "Unrendered"

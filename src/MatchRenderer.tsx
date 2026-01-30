@@ -41,8 +41,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [backgroundPainter, setBackgroundPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
+  
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
+  const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -108,6 +110,20 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       .then(setLockPainter)
       .catch(err => console.error("❌ Failed to load locks.json:", err));
   }, []);
+
+  useEffect(() => {
+    if (!roomTransition) return;
+
+    const id = setInterval(() => {
+      if (performance.now() >= roomTransition.endTime) {
+        setViewedRoomId(roomTransition.toRoom);
+        setRoomTransition(null);
+      }
+    }, 16);
+
+    return () => clearInterval(id);
+  }, [roomTransition]);
+
 
   // animation loop
   useEffect(() => {
@@ -361,8 +377,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             // 🚀 Immediately switch room if doorway leads to adjacent room
             const wall = room.walls[direction];
             if (nextViewedRoomId !== undefined) {
-              console.log(`🚪 Moving view to room ${nextViewedRoomId}`);
-              setViewedRoomId(nextViewedRoomId);
+              const now = performance.now();
+              setRoomTransition({
+                toRoom: nextViewedRoomId,
+                direction,
+                endTime: now + 1200, // match keyframe duration
+              });
             }
           })
           .catch(err => console.error("❌ Move failed:", err));
@@ -399,7 +419,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     for (var i = 0; i < 4; i++) {
       {
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
-        drawCharacterAt(dx, dy, room.walls[i].cell);
+        const cell = room.walls[i].cell;
+        
         globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
         if (room.walls[i].isDoorActionable) {
           let nextViewedRoomId: number | undefined;
@@ -420,7 +441,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
                 case "TIME_GATE_TO_FUTURE":
                   nextViewedRoomId = room.posterior;
                   break;
-
                 case "TIME_GATE_TO_PAST":
                   nextViewedRoomId = room.anterior;
                   break;
@@ -429,13 +449,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
               nextViewedRoomId = undefined;
           }
 
-
-
           setClickableDoorway(dx, dy, i, "activate_door", nextViewedRoomId);
         }
         else if (!room.walls[i].isBlocking) {
           setClickableDoorway(dx, dy, i, "move_character", room.walls[i].adjacent);
         }
+        drawCharacterAt(dx, dy, cell);
       }
       {
         let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
@@ -458,7 +477,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const inventoryGrid: GridCalculator = {
       position: offset,
       offset: [3, 3],
-      stride: [6, 5],
+      stride: [6, 6],
     }
     for (const item of player.inventory.items) {
       const onClick = !item.isActionable ? undefined : async () => {
