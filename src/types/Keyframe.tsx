@@ -1,5 +1,6 @@
 import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor } from "./RoomProps";
 import { lerp, skip } from "../functions/Curves";
+import { TimeRef } from "./TimeRef";
 
 export interface Keyframe {
   animation: string;
@@ -39,13 +40,9 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
 
   for (var k of keyframes) {
     // skip animations in rooms not rendering:
-    // if (k.room0 !== room.index) continue;
+    if (k.room0 !== room.index) continue;
 
     // animationTime >= k.t0 && animationTime < k.t1
-    function doorOpposite(input: number): number {
-      return (input + 2) % 4;
-    }
-
     function getKeyframeMovement(): [[number, number], [number, number], (before: number, after: number, ratio: number) => number] | null {
       switch(k.animation) {
         case "WALKING_FROM_WALL_TO_WALL": return [
@@ -64,6 +61,14 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
           toFloorGlyphsFromCell(room, k.data[0]),
           toFloorGlyphsFromCell(room, k.data[2]),
           lerp];
+        case "STANDING_AT_DOOR": return [
+          toFloorGlyphsFromDoor(room, k.data[2]),
+          toFloorGlyphsFromDoor(room, k.data[2]),
+          skip];
+        case "STANDING_AT_FLOOR": return [
+          toFloorGlyphsFromCell(room, k.data[2]),
+          toFloorGlyphsFromCell(room, k.data[2]),
+          skip];
       }
       return null;
     }
@@ -81,10 +86,117 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       digest.t0 = k.t0;
       digest.t1 = k.t1;
       digest.curve = curve;
-      console.log(movement);
     }
 
   }
 
   return digest;
+}
+
+export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: Keyframe): boolean {
+  return target.animation == source.animation && target.data[2] == source.data[2];
+  // |--------------|source.t1|timeout|source.t1+timeout|----------------
+  // |--------------------------------------------------------||--------- <- safe
+  // |---------------------------------------------|target.t0|--------- <- duplicate
+  // return target.animation == source.animation && source.t1 + timeout >= target.t0;
+}
+
+export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef): Keyframe[] {
+    // check the moves
+    if (character.remainingMoves <= 0) {
+        return [];
+    }
+
+    const isFloorPrediction = floorId !== undefined;
+    const isDoorPrediction = direction !== undefined;
+    if (!isFloorPrediction && !isDoorPrediction) {
+        console.log(`Failed to predict move, floorId and direction cannot both be undefined`);
+        return [];
+    }
+
+    if (isFloorPrediction && isDoorPrediction) {
+        console.log(`Failed to predict move, floorId and direction cannot both be defined`);
+        return [];
+    }
+
+    const room = match.dungeon.rooms[roomId];
+    if (room === undefined) {
+        console.log(`Failed to predict move, room ${roomId} not found within match.dungeon.rooms[]`);
+        return [];
+    }
+
+    // check the floor occupancy
+    if (isFloorPrediction && room.floorCells[floorId].offset != -1) {
+        console.log(`Failed to predict move, floor ${floorId} not found within match.dungeon.rooms[${roomId}].floorCells`);
+        return [];
+    }
+
+    // check the door blockage for doors
+    if (isDoorPrediction && room.walls[direction].isBlocking) {
+        console.log(`Failed to predict move, wall is blocking within match.dungeon.rooms[${roomId}].walls[${direction}]`);
+        return [];
+    }
+
+    // roomId is where the animation should be.
+    // character.location might be a shared wall of an adjacent room.
+    // detecting that exactly would mean checking the animation room's adjacency
+    // but it can also be deduced by checking against the current room.
+    var animation: string | undefined = undefined;
+    const location = character.location;
+    var source: number = location.data;
+    function setDooredAnimation(){
+      animation = isFloorPrediction ? "WALKING_FROM_WALL_TO_FLOOR" : isDoorPrediction ? "WALKING_FROM_WALL_TO_WALL" : undefined;
+    }
+    function doorOpposite(input: number): number {
+      return (input + 2) % 4;
+    }
+    switch (location.type) {
+      case "DOOR_SHARED":
+        if (roomId != location.roomId) {
+          source = doorOpposite(source);
+        }
+      case "DOOR":
+      case "SHAFT_BOTTOM":
+      case "SHAFT_TOP":
+        setDooredAnimation();
+        break;
+      case "FLOOR":
+        animation = isFloorPrediction ? "WALKING_FROM_FLOOR_TO_FLOOR" : isDoorPrediction ? "WALKING_FROM_FLOOR_TO_WALL" : undefined;
+        break;
+      default:
+        console.log(`Failed to predict move, unrecognized character.location.type ${location.type}`);
+        return [];
+    }
+
+    if (animation === undefined) {
+      return [];
+    }
+
+    var destination: number = isFloorPrediction ? floorId : isDoorPrediction ? direction : 0;
+
+    const animationTime = performance.now() - times.serverToClientOffset;
+
+    const MOVE_DURATION = 1100;
+    const STAND_DURATION = 6000;
+    const move: Keyframe = {
+      animation,
+      t0: animationTime,
+      t1: animationTime + MOVE_DURATION,
+      room0: roomId,
+      data: [source, 0, destination, 0],
+    };
+    var animationStanding: string | undefined = isFloorPrediction ? "STANDING_AT_FLOOR" : isDoorPrediction ? "STANDING_AT_DOOR" : undefined;
+    if (animationStanding === undefined) {
+      console.log(`Failed to predict standing, due to neither door nor floor prediction ${location.type}`);
+      return [move];
+    }
+    const stand: Keyframe = {
+      animation: animationStanding,
+      t0: animationTime + MOVE_DURATION,
+      t1: animationTime + MOVE_DURATION + STAND_DURATION,
+      room0: roomId,
+      data: [destination, 0, destination, 0],
+    };
+    console.log(stand);
+    return isFloorPrediction ? [move, stand] : [move];
 }

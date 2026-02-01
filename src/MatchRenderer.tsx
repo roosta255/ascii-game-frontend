@@ -6,7 +6,7 @@ import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
-import { isKeyframeAnimating, Keyframe } from "./types/Keyframe";
+import { createMovePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe } from "./types/Keyframe";
 import { CellSize, measureCellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
@@ -24,7 +24,6 @@ function getAllCharacters(match: any): any[] {
   const dungeonChars = match.dungeon?.characters ?? [];
   const builderChars = match.builders?.map((b: any) => b.character) ?? [];
   const allCharacters = [...dungeonChars, ...builderChars];
-  // console.log("Character offsets:", allCharacters.map(m => m.offset));
   return allCharacters;
 }
 
@@ -45,6 +44,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
+  const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -124,7 +124,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return () => clearInterval(id);
   }, [roomTransition]);
 
-
   // animation loop
   useEffect(() => {
     let rafId: number;
@@ -178,12 +177,21 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   };
 
   
-  // console.log("🧭 Rendering room ID:", viewedRoomId, room);
-  const offsetMap = Object.fromEntries(getAllCharacters(match).map((c: any) => [c.offset, c]));
   const BUILDER_ID = 0;
+  const builderOffset = match.builders[BUILDER_ID].character.offset;
+  function applyClientKeyframesToCharacter(character: any) {
+    var characterCopy = {...character};
+    if (builderOffset == character.characterId && predictedMoves.length != 0) {
+      characterCopy.keyframes = predictedMoves.concat(character.keyframes.filter((k: Keyframe) => !isKeyframeDuplicate(predictedMoves[0], 10000, k)));
+    }
+    return characterCopy; 
+  }
+
+  // console.log("🧭 Rendering room ID:", viewedRoomId, room);
+  const effectiveCharacters = getAllCharacters(match).map(c => applyClientKeyframesToCharacter(c));
+  const offsetMap = Object.fromEntries(effectiveCharacters.map((c: any) => [c.offset, c]));
   const account = match.builders[BUILDER_ID].player.account;
   const player = match.builders[BUILDER_ID].player;
-  const builderOffset = match.builders[BUILDER_ID].character.offset;
   const times = timeRef.current;
 
   async function autoTurnEnding(
@@ -294,6 +302,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         try {
+          setPredictedMoves(createMovePrediction(roomId, floor, undefined, match.builders[BUILDER_ID].character, match, times));
           const moveBody = {
             account,
             character: builderOffset,
@@ -319,6 +328,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           if (!res.ok) {
             console.info(`❌ HTTP ${res.status} request:`, moveBody);
             console.error(`❌ HTTP ${res.status} response:`, bodyText);
+            setPredictedMoves([]);
             throw new Error(`HTTP ${res.status}`);
           }
 
@@ -331,9 +341,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
           // 4️⃣ Refresh AFTER move completes
           await refreshMatch();
+          // setPredictedMoves([]);
 
         } catch (err) {
           console.error("❌ Floor move failed:", err);
+          setPredictedMoves([]);
         }
       });
     }
@@ -352,6 +364,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string, nextViewedRoomId?: number) {
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        setPredictedMoves(createMovePrediction(roomId, undefined, direction, match.builders[BUILDER_ID].character, match, times));
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         await autoTurnEnding(false, true);
         fetch(`/api/match/${match.filename}/${route}`, {
@@ -364,6 +377,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             if (!res.ok) {
               console.info(`❌ HTTP ${res.status} request: `, moveBody);
               console.error(`❌ HTTP ${res.status} response: `, bodyText);
+              setPredictedMoves([]);
               throw new Error(`HTTP ${res.status}`);
             }
             try {
@@ -385,7 +399,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
               });
             }
           })
-          .catch(err => console.error("❌ Move failed:", err));
+          .catch(err => {
+            console.error("❌ Move failed:", err);
+            setPredictedMoves([]);
+          });
       });
     }
 
@@ -513,13 +530,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   drawInventoryAt([41, 13]);
 
-  const animationTime = performance.now() - times.serverToClientOffset
+  const animationTime = performance.now() - times.serverToClientOffset;
 
   return (
   <div ref={sceneRef} className="scene">
     <pre>{blockToText(globals.glyphs)}</pre>
     <div className="overlay">
-      {getAllCharacters(match).map(character =>
+      {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
         character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
           ? (
             <AnimatedCharacter
