@@ -6,6 +6,11 @@ import App from "./App";
 import './index.css';
 import './App.css';
 import { AuthProvider } from "./AuthContext";
+import { bootstrapAudio } from "./audio/audioBootstrap";
+
+document.addEventListener("pointerdown", () => {
+  bootstrapAudio();
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

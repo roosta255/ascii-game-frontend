@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getSynth } from "./audio/index";
 import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
 import { Painter } from "./assets/Painter";
@@ -310,8 +311,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             floor,
           };
 
+          getSynth().playSquare(220);
+
           // 1️⃣ End turn (refresh happens inside if needed)
           await autoTurnEnding(false, true);
+
 
           // 2️⃣ Move character (WAIT for it)
           const res = await fetch(
@@ -341,7 +345,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
           // 4️⃣ Refresh AFTER move completes
           await refreshMatch();
-          // setPredictedMoves([]);
 
         } catch (err) {
           console.error("❌ Floor move failed:", err);

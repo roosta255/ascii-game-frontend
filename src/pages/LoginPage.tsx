@@ -1,14 +1,21 @@
 // LoginPage.tsx
 import { useState } from "react";
+import { initAudioOnce, resumeAudio } from "../audio";
+
 
 export default function LoginPage({ onLogin }: { onLogin: (account: string) => void }) {
   const [account, setAccount] = useState("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (account.trim()) {
-      onLogin(account.trim());
-    }
+
+    if (!account.trim()) return;
+
+    // 🔓 unlock audio on a real user gesture
+    initAudioOnce();
+    resumeAudio();
+
+    onLogin(account.trim());
   }
 
   return (
