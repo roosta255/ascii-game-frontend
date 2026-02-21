@@ -1,0 +1,14 @@
+{
+    "path": "minimap-5x4.xp",
+    "palettes": 14,
+    "size": [35, 25],
+    "stride": [36, 26],
+    "offset": [1, 15],
+    "default": [2, 3],
+    "sprites": {
+        "INVENTORY": [2,2]
+    },
+    "spritesWithHorizontalFlip": {},
+    "spritesWithVerticalFlip": {},
+    "spritesWithHorizontalAndVerticalFlip": {}
+}

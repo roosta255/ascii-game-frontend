@@ -1,0 +1,40 @@
+{
+    "LIGHTNING_ROD": { "renderer": { "type": "BackgroundRenderer", "sprite": "LIGHTNING_ROD_BACKGROUND", "palette": 16 } },
+    "POWER_GENERATOR": {
+        "renderer": {
+            "type": "BackgroundRenderer",
+            "sprite": "POWER_GENERATOR_BACKGROUND",
+            "palette": 16
+        }
+    },
+    "RECT_2_x_5": {
+        "renderer": {
+            "type": "BackgroundRenderer",
+            "sprite": "RECT_2_x_5_BACKGROUND",
+            "palette": 16
+        }
+    },
+    "RECT_4_x_5": {
+        "renderer": {
+            "type": "BackgroundRenderer",
+            "sprite": "RECT_4_x_5_BACKGROUND",
+            "palette": 16
+        }
+    },
+    "TIME_GATE_TO_FUTURE": { "renderer": { "type": "BackgroundRenderer", "sprite": "TIME_GATE", "palette": 16 } },
+    "TIME_GATE_TO_PAST": { "renderer": { "type": "BackgroundRenderer", "sprite": "TIME_GATE", "palette": 16 } },
+    "RECT_4_x_1": {
+        "renderer": {
+            "type": "BackgroundRenderer",
+            "sprite": "RECT_4_x_1_BACKGROUND",
+            "palette": 16
+        }
+    },
+    "RECT_3_x_3": {
+        "renderer": {
+            "type": "BackgroundRenderer",
+            "sprite": "RECT_3_x_3_BACKGROUND",
+            "palette": 16
+        }
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "path": "knossos-2025-room.xp",
+    "palettes": 19,
+    "size": [39, 40],
+    "stride": [40, 41],
+    "offset": [0, 19],
+    "default": [0, 0],
+    "sprites": {
+        "RECT_4_x_5_BACKGROUND": [0,0],
+        "RECT_4_x_5_DOORWAYS": [1,0],
+        "DOORWAY_EXITS": [3,0],
+        "LIGHTNING_ROD_BACKGROUND": [2,0],
+        "POWER_GENERATOR_BACKGROUND": [0,1],
+        "POWER_GENERATOR_DOORWAYS": [0,1],
+        "RECT_3_x_3_BACKGROUND": [0,2],
+        "RECT_3_x_3_DOORWAYS": [1,2],
+        "RECT_4_x_1_BACKGROUND": [2,1],
+        "RECT_4_x_1_DOORWAYS": [3,1],
+        "RECT_2_x_5_BACKGROUND": [2,2],
+        "RECT_2_x_5_DOORWAYS": [3,2],
+        "TIME_GATE": [4,1]
+    },
+    "spritesWithHorizontalFlip": {},
+    "spritesWithVerticalFlip": {},
+    "spritesWithHorizontalAndVerticalFlip": {}
+}

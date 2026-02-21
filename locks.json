@@ -1,0 +1,115 @@
+{
+    "WALL": { "renderer": { "type": "Unrendered" } },
+    "WALL_ALLOCATED": { "renderer": { "type": "Unrendered" } },
+    "LIGHTNING_ROD_AWAKENED": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 5 } },
+    "LIGHTNING_ROD_DORMANT": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 2 } },
+    "LIGHTNING_ROD_EMPTY": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE_SLOT", "palette": 0 } },
+    "TIME_GATE_AWAKENED": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 5 } },
+    "TIME_GATE_DORMANT": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 2 } },
+    "TIME_GATE_EMPTY": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE_SLOT", "palette": 0 } },
+    "LADDER_1_BOTTOM": { "renderer": { "type": "Unrendered" } },
+    "LADDER_1_TOP": { "renderer": { "type": "Unrendered" } },
+    "POLE_1_BOTTOM": { "renderer": { "type": "Unrendered" } },
+    "POLE_1_TOP": { "renderer": { "type": "Unrendered" } },
+    "DOORWAY": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_ORANGE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_BLUE_OPEN": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "JAILER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYED",
+            "palette": 0
+        }
+    },
+    "JAILER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "KEEPER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYED",
+            "palette": 0
+        }
+    },
+    "SHIFTER_EGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_EGRESS_KEYED",
+            "palette": 0
+        }
+    },
+    "SHIFTER_INGRESS_KEYED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_INGRESS_KEYED",
+            "palette": 0
+        }
+    },
+    "TOGGLER_ORANGE_CLOSED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "TOGGLER_BLUE_CLOSED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "KEEPER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "SHIFTER_EGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_EGRESS_KEYLESS",
+            "palette": 0
+        }
+    },
+    "SHIFTER_INGRESS_KEYLESS": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "SHIFTER_INGRESS_KEYLESS",
+            "palette": 0
+        }
+    }
+}
