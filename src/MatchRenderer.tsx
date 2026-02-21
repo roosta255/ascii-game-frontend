@@ -212,7 +212,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const endTurnBody = { account };
 
     const res = await fetch(
-      `/api/match/${match.filename}/end_turn`,
+      `${API_BASE}/api/match/${match.filename}/end_turn`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,7 +270,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         try {
           const subject = character.isObject ? builderOffset : cell.offset;
           const activateBody = { account, room: roomId, character: cell.offset, target: subject };
-          const response = await fetch(`/api/match/${match.filename}/activate_character`, {
+          const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_character`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -319,7 +319,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
           // 2️⃣ Move character (WAIT for it)
           const res = await fetch(
-            `/api/match/${match.filename}/move_character`,
+            `${API_BASE}/api/match/${match.filename}/move_character`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -370,7 +370,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         setPredictedMoves(createMovePrediction(roomId, undefined, direction, match.builders[BUILDER_ID].character, match, times));
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         await autoTurnEnding(false, true);
-        fetch(`/api/match/${match.filename}/${route}`, {
+        fetch(`${API_BASE}/api/match/${match.filename}/${route}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(moveBody),
@@ -413,7 +413,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         await autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
-        fetch(`/api/match/${match.filename}/activate_lock`, {
+        fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(moveBody),
@@ -504,7 +504,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         await autoTurnEnding(true, false);
         try {
           const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index };
-          const response = await fetch(`/api/match/${match.filename}/activate_inventory_item`, {
+          const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_inventory_item`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -8,14 +8,14 @@ export default function JoinMatchPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`/api/match/${id}`)
+    fetch(`${API_BASE}/api/match/${id}`)
       .then(res => res.json())
       .then(setMatch)
       .catch(() => setError("Could not load match"));
   }, [id]);
 
   function joinMatch() {
-    fetch(`/api/match/${id}/join`, { method: "POST" })
+    fetch(`${API_BASE}/api/match/${id}/join`, { method: "POST" })
       .then(res => {
         if (!res.ok) throw new Error("Join failed");
         return res.json();

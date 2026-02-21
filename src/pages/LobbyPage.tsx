@@ -24,13 +24,13 @@ export default function LobbyPage() {
   const { account: currentAccount } = useAuth();
 
   useEffect(() => {
-    fetch("/api/matches")
+    fetch(`${API_BASE}/api/matches`)
       .then(res => res.json())
       .then(async data => {
         const matchIds = data.matches;
         const fullMatches: MatchSummary[] = await Promise.all(
           matchIds.map(async (id: string) => {
-            const res = await fetch(`/api/match/${id}`);
+            const res = await fetch(`${API_BASE}/api/match/${id}`);
             const matchJsonString = await res.json(); // <-- this is a string
             const matchData: MatchSummary = JSON.parse(matchJsonString); // manually parse it
             return matchData;
@@ -82,7 +82,7 @@ export default function LobbyPage() {
   }
 
   function joinMatch(matchId: string) {
-    fetch(`/api/match/${matchId}/join`, {
+    fetch(`${API_BASE}/api/match/${matchId}/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ account: currentAccount }),
@@ -90,7 +90,7 @@ export default function LobbyPage() {
   }
 
   function leaveMatch(matchId: string) {
-    fetch(`/api/match/${matchId}/leave`, {
+    fetch(`${API_BASE}/api/match/${matchId}/leave`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ account: currentAccount }),
@@ -98,7 +98,7 @@ export default function LobbyPage() {
   }
 
   function startMatch(matchId: string) {
-    fetch(`/api/match/${matchId}/start`, {
+    fetch(`${API_BASE}/api/match/${matchId}/start`, {
       method: "POST"
     }).then(() => reload());
   }
@@ -189,8 +189,11 @@ function CreateMatchForm({ onCreate }: { onCreate: () => void }) {
 
   const { account: currentAccount } = useAuth();
 
+  console.log("BASE_URL =", import.meta.env.BASE_URL);
+  console.log("API_BASE =", API_BASE);
+
   useEffect(() => {
-    fetch("/api/generators")
+    fetch(`${API_BASE}/api/generators`)
       .then(res => res.json())
       .then(data => setGenerators(data.generators || []))
       .catch(err => console.error("Failed to load generators", err));
@@ -198,7 +201,7 @@ function CreateMatchForm({ onCreate }: { onCreate: () => void }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    fetch("/api/match", {
+    fetch(`${API_BASE}/api/match`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

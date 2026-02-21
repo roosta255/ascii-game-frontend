@@ -32,7 +32,7 @@ export default function MatchPage() {
   useEffect(() => {
     if (!id) return;
 
-    fetch(`/api/match/${id}`)
+    fetch(`${API_BASE}/api/match/${id}`)
       .then(res => res.json())
       .then(rawString => {
         const data = JSON.parse(rawString);
@@ -79,7 +79,7 @@ export default function MatchPage() {
 
     async function fetchUpdates() {
       try {
-        const res = await fetch(`/api/match/${id}`);
+        const res = await fetch(`${API_BASE}/api/match/${id}`);
         if (!res.ok) throw new Error(`Failed to fetch match ${id}`);
 
         const raw = await res.json();           // First parse: gives a string
@@ -103,7 +103,7 @@ export default function MatchPage() {
   if (!match || viewedRoomId == null) return <div>Match not found or no room visible.</div>;
 
   async function refreshMatch() {
-    const res = await fetch(`/api/match/${match.filename}`);
+    const res = await fetch(`${API_BASE}/api/match/${match.filename}`);
 
     if (!res.ok) {
       console.error("❌ Failed to refresh match:", await res.text());
@@ -139,7 +139,7 @@ export default function MatchPage() {
         <button
           onClick={async () => {
             try {
-              await fetch(`/api/match/${match.filename}/end_turn`, {
+              await fetch(`${API_BASE}/api/match/${match.filename}/end_turn`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ account: currentAccount })

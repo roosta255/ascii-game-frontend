@@ -2,21 +2,26 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
-  base: '/ascii-game-frontend/',
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
+export default defineConfig(({ command }) => ({
+  base: command === 'serve' ? '/' : '/ascii-game-frontend/',
+
+  define: {
+    API_BASE: JSON.stringify(
+      command === 'serve'
+        ? '' // local dev uses proxy
+        : 'https://game-backend.callawayservice.com'
+    )
   },
+
+  plugins: [react()],
+
   server: {
     proxy: {
-      "/api": {
-        target: "http://localhost:8081", // replace with your actual backend port
+      '/api': {
+        target: 'https://game-backend.callawayservice.com',
         changeOrigin: true,
-        rewrite: (path) => path,
-      },
-    },
-  },
-})
+        secure: true,
+      }
+    }
+  }
+}))
