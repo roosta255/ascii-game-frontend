@@ -5,8 +5,9 @@
   line-height: 1;       /* CRITICAL */
 }
 
-.scene > pre {
+.scene pre {
   margin: 0;
+  font-size: inherit;
 }
 
 .overlay {

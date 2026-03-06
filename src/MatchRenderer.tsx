@@ -8,9 +8,10 @@ import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
 import { createMovePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe } from "./types/Keyframe";
-import { CellSize, measureCellSize } from "./types/CellSize";
+import { CellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
+import { useIsMobile } from "./hooks/useIsMobile";
 import "./MatchRenderer.css";
 
 export interface MatchRendererProps {
@@ -44,12 +45,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
+  const naturalCanvasWidthRef = useRef(0);
+  const isMobile = useIsMobile();
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
       console.log("✅ RexPaintFont loaded");
+      // Force re-measurement: the baseline width may have been captured with the
+      // fallback font if assets finished loading before the font did.
+      naturalCanvasWidthRef.current = 0;
     });
 
     fetch(`${import.meta.env.BASE_URL}knossos-2025-room.json`)
@@ -134,12 +140,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!sceneRef.current) return;
-    cellSize.current = measureCellSize(sceneRef.current);
-    console.log(cellSize.current);
   }, []);
 
   const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && roomPropLoader && doorPainter && lockPainter && doorwayPainter && backgroundPainter && iconsTexture && match;
@@ -531,26 +531,41 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   }
 
-  drawInventoryAt([41, 13]);
+  if (!isMobile) {
+    drawInventoryAt([41, 13]);
+  }
 
   const animationTime = performance.now() - times.serverToClientOffset;
 
+  // Capture the natural canvas width once (at base font-size, before any scaling).
+  // CSS font-size changes alter scrollWidth so we store the baseline to avoid feedback loops.
+  const currentScrollWidth = sceneRef.current?.scrollWidth ?? 0;
+  if (naturalCanvasWidthRef.current === 0 && currentScrollWidth > 400) {
+    naturalCanvasWidthRef.current = currentScrollWidth;
+  }
+  const availableWidth = sceneRef.current?.parentElement?.clientWidth ?? window.innerWidth;
+  const targetFontSize = (isMobile && naturalCanvasWidthRef.current > 0)
+    ? Math.min(16, 16 * availableWidth / (naturalCanvasWidthRef.current * 39 / 80))
+    : 16;
+
   return (
-  <div ref={sceneRef} className="scene">
-    <pre>{blockToText(globals.glyphs)}</pre>
-    <div className="overlay">
-      {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
-        character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
-          ? (
-            <AnimatedCharacter
-              character={character}
-              animationTime={animationTime}
-              globals={rebuildGlyphs(globals, 5,4)}
-              room={roomProps}
-            />
-          )
-          : null
-      )}
+  <div style={{ overflow: "hidden" }}>
+    <div ref={sceneRef} className="scene" style={{ fontSize: `${targetFontSize}px` }}>
+      <pre>{blockToText(globals.glyphs)}</pre>
+      <div className="overlay">
+        {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
+          character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
+            ? (
+              <AnimatedCharacter
+                character={character}
+                animationTime={animationTime}
+                globals={rebuildGlyphs(globals, 5,4)}
+                room={roomProps}
+              />
+            )
+            : null
+        )}
+      </div>
     </div>
   </div>
 );

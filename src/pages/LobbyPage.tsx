@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface MatchSummary {
   filename: string;
@@ -22,6 +23,7 @@ export default function LobbyPage() {
   const navigate = useNavigate();
 
   const { account: currentAccount } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetch(`${API_BASE}/api/matches`)
@@ -103,6 +105,23 @@ export default function LobbyPage() {
     }).then(() => reload());
   }
 
+  const cardStyle: React.CSSProperties = {
+    border: "1px solid #444",
+    borderRadius: "4px",
+    padding: "0.75rem",
+    marginBottom: "0.5rem",
+  };
+  const cardMetaStyle: React.CSSProperties = {
+    color: "#aaa",
+    fontSize: "0.85em",
+    margin: "0.2rem 0 0.5rem",
+  };
+  const cardActionsStyle: React.CSSProperties = {
+    display: "flex",
+    gap: "0.5rem",
+    flexWrap: "wrap",
+  };
+
   return (
     <div style={{ padding: "1rem" }}>
       <h1>Ian's Dungeon Server</h1>
@@ -111,70 +130,107 @@ export default function LobbyPage() {
 
       <h2>Your Matches</h2>
       {joinedMatches.length > 0 ? (
-        <table border={1} cellPadding={8} style={{ marginBottom: "2rem" }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Host</th>
-              <th>Generator</th>
-              <th>Status</th>
-              <th>Open</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        isMobile ? (
+          <div style={{ marginBottom: "2rem" }}>
             {joinedMatches.map(match => (
-              <tr key={match.filename}>
-                <td>{match.username}</td>
-                <td>{match.host}</td>
-                <td>{match.generator}</td>
-                <td>{status(match)}</td>
-                <td>
+              <div key={match.filename} style={cardStyle}>
+                <strong>{match.username}</strong>
+                <div style={cardMetaStyle}>
+                  Host: {match.host} · Gen: {match.generator} · {status(match)}
+                </div>
+                <div style={cardActionsStyle}>
                   <button onClick={() => navigate(`/match/${match.filename}`)}>Open</button>
-                </td>
-                <td>
                   <button onClick={() => leaveMatch(match.filename)}>Leave</button>
-                  {" "}
                   {isHost(match) && !match.isStarted && (
                     <button onClick={() => startMatch(match.filename)}>Start</button>
                   )}
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <table border={1} cellPadding={8} style={{ marginBottom: "2rem" }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Host</th>
+                <th>Generator</th>
+                <th>Status</th>
+                <th>Open</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {joinedMatches.map(match => (
+                <tr key={match.filename}>
+                  <td>{match.username}</td>
+                  <td>{match.host}</td>
+                  <td>{match.generator}</td>
+                  <td>{status(match)}</td>
+                  <td>
+                    <button onClick={() => navigate(`/match/${match.filename}`)}>Open</button>
+                  </td>
+                  <td>
+                    <button onClick={() => leaveMatch(match.filename)}>Leave</button>
+                    {" "}
+                    {isHost(match) && !match.isStarted && (
+                      <button onClick={() => startMatch(match.filename)}>Start</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
       ) : (
         <p>You are not in any active matches.</p>
       )}
 
       <h2>Available Matches</h2>
       {joinableMatches.length > 0 ? (
-        <table border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Host</th>
-              <th>Generator</th>
-              <th>Open</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        isMobile ? (
+          <div>
             {joinableMatches.map(match => (
-              <tr key={match.filename}>
-                <td>{match.username}</td>
-                <td>{match.host}</td>
-                <td>{match.generator}</td>
-                <td>
+              <div key={match.filename} style={cardStyle}>
+                <strong>{match.username}</strong>
+                <div style={cardMetaStyle}>
+                  Host: {match.host} · Gen: {match.generator}
+                </div>
+                <div style={cardActionsStyle}>
                   <button onClick={() => navigate(`/match/${match.filename}`)}>Open</button>
-                </td>
-                <td>
                   <button onClick={() => joinMatch(match.filename)}>Join</button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <table border={1} cellPadding={8}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Host</th>
+                <th>Generator</th>
+                <th>Open</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {joinableMatches.map(match => (
+                <tr key={match.filename}>
+                  <td>{match.username}</td>
+                  <td>{match.host}</td>
+                  <td>{match.generator}</td>
+                  <td>
+                    <button onClick={() => navigate(`/match/${match.filename}`)}>Open</button>
+                  </td>
+                  <td>
+                    <button onClick={() => joinMatch(match.filename)}>Join</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
       ) : (
         <p>No open matches available to join.</p>
       )}
@@ -188,6 +244,7 @@ function CreateMatchForm({ onCreate }: { onCreate: () => void }) {
   const [generators, setGenerators] = useState<string[]>([]);
 
   const { account: currentAccount } = useAuth();
+  const isMobile = useIsMobile();
 
   console.log("BASE_URL =", import.meta.env.BASE_URL);
   console.log("API_BASE =", API_BASE);
