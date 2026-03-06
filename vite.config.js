@@ -9,7 +9,7 @@ export default defineConfig(({ command }) => ({
     API_BASE: JSON.stringify(
       command === 'serve'
         ? '' // local dev uses proxy
-        : 'https://game-backend.callawayservice.com'
+        : process.env.VITE_API_URL
     )
   },
 
