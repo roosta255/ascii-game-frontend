@@ -15,7 +15,7 @@
 
 @font-face {
   font-family: 'RexPaintFont';
-  src: url('/ascii-game-frontend/fonts/Px437_IBM_EGA_8x8.ttf') format('truetype');
+  src: url('./fonts/Px437_IBM_EGA_8x8.ttf') format('truetype');
 }
 
 html, body {
