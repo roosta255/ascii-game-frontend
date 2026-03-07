@@ -47,6 +47,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const naturalCanvasWidthRef = useRef(0);
   const isMobile = useIsMobile();
+  const [showInventory, setShowInventory] = useState(false);
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
 
@@ -174,7 +175,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(80, 42),
+    glyphs: createBlankCanvas(80, isMobile && showInventory ? 70 : 42),
   };
 
   
@@ -226,6 +227,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       console.info(`❌ HTTP ${res.status} request: `, endTurnBody);
       console.error(`❌ HTTP ${res.status} response: `, bodyText);
       throw new Error(`End turn failed (${res.status})`);
+    } else {
+      console.info(`OK HTTP response to end_turn from `, bodyText);
     }
 
     // Only refresh if the end turn succeeded
@@ -268,17 +271,19 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const onClick = !character.isActionable ? undefined : async () => {
         await autoTurnEnding(true, false);
         try {
-          const subject = character.isObject ? builderOffset : cell.offset;
-          const activateBody = { account, room: roomId, character: cell.offset, target: subject };
+          const target = character.isObject ? builderOffset : cell.offset;
+          const activator = character.isObject ? cell.offset : builderOffset;
+          const activateBody = { account, room: roomId, character: activator, target };
+          const stringifiedBody = JSON.stringify(activateBody);
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_character`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(activateBody),
+            body: stringifiedBody,
           });
           if (!response.ok) {
-            console.warn(`Failed to activate character, body: ${activateBody}`);
+            console.warn(`Failed to activate character, body: ${stringifiedBody}`);
             console.error("Failed to activate character, response:", await response.text());
           } else {
             console.log("Character activated");
@@ -315,7 +320,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
           // 1️⃣ End turn (refresh happens inside if needed)
           await autoTurnEnding(false, true);
-
+          const stringifyMoveBody = JSON.stringify(moveBody);
 
           // 2️⃣ Move character (WAIT for it)
           const res = await fetch(
@@ -323,7 +328,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(moveBody),
+              body: stringifyMoveBody,
             }
           );
 
@@ -340,7 +345,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           if (bodyText.trim().startsWith("{") || bodyText.trim().startsWith("[")) {
             console.log("✅ Move success:", JSON.parse(bodyText));
           } else {
-            console.log("✅ Move success (non-JSON):", bodyText);
+            console.log("✅ Move success request (non-JSON):", stringifyMoveBody);
+            console.log("✅ Move success response (non-JSON):", bodyText);
           }
 
           // 4️⃣ Refresh AFTER move completes
@@ -413,20 +419,22 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         await autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
+        const stringifiedBody = JSON.stringify(moveBody);
         fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(moveBody),
+          body: stringifiedBody,
         })
           .then(async res => {
             const bodyText = await res.text();
+            console.log("Lock request:", stringifiedBody);
             if (!res.ok) {
               console.info(`❌ HTTP ${res.status} request: `, moveBody);
               console.error(`❌ HTTP ${res.status} response: `, bodyText);
               throw new Error(`HTTP ${res.status}`);
             }
             try {
-              console.log("✅ Lock success:", JSON.parse(bodyText));
+              console.log("✅ Lock success response:", JSON.parse(bodyText));
               await refreshMatch();
             } catch {
               console.warn("⚠️ Non-JSON response:", bodyText);
@@ -533,6 +541,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   if (!isMobile) {
     drawInventoryAt([41, 13]);
+  } else if (showInventory) {
+    drawInventoryAt([0, 41]);
   }
 
   const animationTime = performance.now() - times.serverToClientOffset;
@@ -549,24 +559,31 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     : 16;
 
   return (
-  <div style={{ overflow: "hidden" }}>
-    <div ref={sceneRef} className="scene" style={{ fontSize: `${targetFontSize}px` }}>
-      <pre>{blockToText(globals.glyphs)}</pre>
-      <div className="overlay">
-        {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
-          character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
-            ? (
-              <AnimatedCharacter
-                character={character}
-                animationTime={animationTime}
-                globals={rebuildGlyphs(globals, 5,4)}
-                room={roomProps}
-              />
-            )
-            : null
-        )}
+  <div>
+    <div style={{ overflow: "hidden" }}>
+      <div ref={sceneRef} className="scene" style={{ fontSize: `${targetFontSize}px` }}>
+        <pre>{blockToText(globals.glyphs)}</pre>
+        <div className="overlay">
+          {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
+            character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
+              ? (
+                <AnimatedCharacter
+                  character={character}
+                  animationTime={animationTime}
+                  globals={rebuildGlyphs(globals, 5,4)}
+                  room={roomProps}
+                />
+              )
+              : null
+          )}
+        </div>
       </div>
     </div>
+    {isMobile && (
+      <button onClick={() => setShowInventory(v => !v)} style={{ marginTop: "0.5rem" }}>
+        {showInventory ? "Close Inventory" : "Inventory"}
+      </button>
+    )}
   </div>
 );
 
