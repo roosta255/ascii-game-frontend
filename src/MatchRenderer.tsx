@@ -14,6 +14,15 @@ import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor
 import { useIsMobile } from "./hooks/useIsMobile";
 import "./MatchRenderer.css";
 
+const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
+
+function debugKeyframes(label: string, keyframes: Keyframe[]) {
+  if (!DEBUG_KEYFRAMES) return;
+  console.groupCollapsed(`[keyframes] ${label} (${keyframes.length})`);
+  console.log(JSON.stringify(keyframes, null, 2));
+  console.groupEnd();
+}
+
 export interface MatchRendererProps {
   match: any;
   viewedRoomId: number;
@@ -53,6 +62,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
   // read the latest value synchronously without waiting for a React re-render.
   const predictedStatsRef = useRef<Keyframe[]>([]);
+  // Synchronous refs for movement prediction chaining between rapid clicks.
+  const predictedMovesRef = useRef<Keyframe[]>([]);
+  const predictedLocationRef = useRef<{ type: string; data: number; t1: number } | null>(null);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -135,6 +147,18 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return () => clearInterval(id);
   }, [roomTransition]);
 
+  const lastLoggedKeyframesRef = useRef<string>('');
+  // Log server keyframes whenever they actually change
+  useEffect(() => {
+    if (!DEBUG_KEYFRAMES || !match) return;
+    const builderChar = match.builders?.[0]?.character;
+    if (!builderChar) return;
+    const json = JSON.stringify(builderChar.keyframes ?? []);
+    if (json === lastLoggedKeyframesRef.current) return;
+    lastLoggedKeyframesRef.current = json;
+    debugKeyframes(`server → builder keyframes (t=${performance.now().toFixed(0)})`, builderChar.keyframes ?? []);
+  }, [match]);
+
   // animation loop
   useEffect(() => {
     let rafId: number;
@@ -187,7 +211,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   function applyClientKeyframesToCharacter(character: any) {
     var characterCopy = {...character};
     if (builderOffset == character.characterId && predictedMoves.length != 0) {
-      characterCopy.keyframes = predictedMoves.concat(character.keyframes.filter((k: Keyframe) => !isKeyframeDuplicate(predictedMoves[0], 10000, k)));
+      characterCopy.keyframes = predictedMoves.concat(character.keyframes.filter((k: Keyframe) => !predictedMoves.some(p => isKeyframeDuplicate(p, 10000, k))));
     }
     return characterCopy; 
   }
@@ -277,6 +301,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           const builderCharacter = match.builders[BUILDER_ID].character;
           const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+          debugKeyframes(`character click → predicted stats`, predictedStatsRef.current);
+          debugKeyframes(`character click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
           getSynth().playSquare(220);
           const target = character.isObject ? builderOffset : cell.offset;
           const activator = character.isObject ? cell.offset : builderOffset;
@@ -320,12 +346,29 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         try {
           const builderCharacter = match.builders[BUILDER_ID].character;
-          const movePrediction = createMovePrediction(roomId, floor, undefined, builderCharacter, match, times);
+          const currentAnimTime = performance.now() - times.serverToClientOffset;
+          const predictedLoc = predictedLocationRef.current;
+          const activePredictedLoc = (predictedLoc && predictedLoc.t1 > currentAnimTime) ? predictedLoc : null;
+          if (predictedLoc && !activePredictedLoc) {
+            predictedMovesRef.current = [];
+            predictedLocationRef.current = null;
+          }
+          const sourceCharacter = activePredictedLoc
+            ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
+            : builderCharacter;
+          const movePrediction = createMovePrediction(roomId, floor, undefined, sourceCharacter, match, times, activePredictedLoc?.t1);
           const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
           if (movePrediction.length > 0) {
             predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
+            predictedLocationRef.current = { type: 'FLOOR', data: floor, t1: movePrediction[0].t1 };
           }
-          setPredictedMoves(movePrediction);
+          const chainedPredictions = activePredictedLoc
+            ? [...predictedMovesRef.current.filter(k => !k.animation.startsWith('STANDING_')), ...movePrediction]
+            : movePrediction;
+          predictedMovesRef.current = chainedPredictions;
+          debugKeyframes(`floor click → predicted movement`, chainedPredictions);
+          debugKeyframes(`floor click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
+          setPredictedMoves(chainedPredictions);
           const moveBody = {
             account,
             character: builderOffset,
@@ -355,6 +398,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             console.info(`❌ HTTP ${res.status} request:`, moveBody);
             console.error(`❌ HTTP ${res.status} response:`, bodyText);
             setPredictedMoves([]);
+            predictedMovesRef.current = [];
+            predictedLocationRef.current = null;
             throw new Error(`HTTP ${res.status}`);
           }
 
@@ -372,6 +417,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         } catch (err) {
           console.error("❌ Floor move failed:", err);
           setPredictedMoves([]);
+          predictedMovesRef.current = [];
+          predictedLocationRef.current = null;
           predictedStatsRef.current = [];
         }
       });
@@ -393,12 +440,29 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         const builderCharacter = match.builders[BUILDER_ID].character;
-        const movePrediction = createMovePrediction(roomId, undefined, direction, builderCharacter, match, times);
+        const currentAnimTime = performance.now() - times.serverToClientOffset;
+        const predictedLoc = predictedLocationRef.current;
+        const activePredictedLoc = (predictedLoc && predictedLoc.t1 > currentAnimTime) ? predictedLoc : null;
+        if (predictedLoc && !activePredictedLoc) {
+          predictedMovesRef.current = [];
+          predictedLocationRef.current = null;
+        }
+        const sourceCharacter = activePredictedLoc
+          ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
+          : builderCharacter;
+        const movePrediction = createMovePrediction(roomId, undefined, direction, sourceCharacter, match, times, activePredictedLoc?.t1);
         const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
         if (movePrediction.length > 0) {
           predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
+          predictedLocationRef.current = { type: 'DOOR', data: direction, t1: movePrediction[0].t1 };
         }
-        setPredictedMoves(movePrediction);
+        const chainedPredictions = activePredictedLoc
+          ? [...predictedMovesRef.current.filter(k => !k.animation.startsWith('STANDING_')), ...movePrediction]
+          : movePrediction;
+        predictedMovesRef.current = chainedPredictions;
+        debugKeyframes(`door click → predicted movement`, chainedPredictions);
+        debugKeyframes(`door click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
+        setPredictedMoves(chainedPredictions);
         getSynth().playSquare(220);
         const moveBody = { account, character: builderOffset, room: roomId, direction, isForcedTurnEnd };
         fetch(`${API_BASE}/api/match/${match.filename}/${route}`, {
@@ -412,6 +476,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
               console.info(`❌ HTTP ${res.status} request: `, moveBody);
               console.error(`❌ HTTP ${res.status} response: `, bodyText);
               setPredictedMoves([]);
+              predictedMovesRef.current = [];
+              predictedLocationRef.current = null;
               throw new Error(`HTTP ${res.status}`);
             }
             try {
@@ -437,6 +503,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           .catch(err => {
             console.error("❌ Move failed:", err);
             setPredictedMoves([]);
+            predictedMovesRef.current = [];
+            predictedLocationRef.current = null;
             predictedStatsRef.current = [];
           });
       });

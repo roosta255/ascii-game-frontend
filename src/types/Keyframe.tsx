@@ -126,7 +126,7 @@ export function createActionDecrementPrediction(baseActions: number, pending: Ke
   return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, 0, Math.max(0, from - 1), 0] };
 }
 
-export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef): Keyframe[] {
+export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef, startTime?: number): Keyframe[] {
     // check the moves
     if (character.remainingMoves <= 0) {
         return [];
@@ -199,7 +199,7 @@ export function createMovePrediction(roomId: number, floorId: number | undefined
 
     var destination: number = isFloorPrediction ? floorId : isDoorPrediction ? direction : 0;
 
-    const animationTime = performance.now() - times.serverToClientOffset;
+    const animationTime = startTime ?? (performance.now() - times.serverToClientOffset);
 
     const MOVE_DURATION = 1100;
     const STAND_DURATION = 6000;
