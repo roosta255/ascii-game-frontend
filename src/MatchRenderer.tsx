@@ -7,7 +7,7 @@ import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
-import { createMovePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe } from "./types/Keyframe";
+import { createMovePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe, predictedMovesRemaining, predictedActionsRemaining, createMoveDecrementPrediction, createActionDecrementPrediction } from "./types/Keyframe";
 import { CellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
@@ -50,6 +50,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [showInventory, setShowInventory] = useState(false);
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
+  // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
+  // read the latest value synchronously without waiting for a React re-render.
+  const predictedStatsRef = useRef<Keyframe[]>([]);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -195,6 +198,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const account = match.builders[BUILDER_ID].player.account;
   const player = match.builders[BUILDER_ID].player;
   const times = timeRef.current;
+  const isMatchStarted = !!match.isStarted;
 
   async function autoTurnEnding(
     isActing: boolean,
@@ -268,12 +272,15 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       // animations check
 
       if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) return;
-      const onClick = !character.isActionable ? undefined : async () => {
-        await autoTurnEnding(true, false);
+      const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
         try {
+          const builderCharacter = match.builders[BUILDER_ID].character;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+          getSynth().playSquare(220);
           const target = character.isObject ? builderOffset : cell.offset;
           const activator = character.isObject ? cell.offset : builderOffset;
-          const activateBody = { account, room: roomId, character: activator, target };
+          const activateBody = { account, room: roomId, character: activator, target, isForcedTurnEnd };
           const stringifiedBody = JSON.stringify(activateBody);
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_character`, {
             method: "POST",
@@ -285,12 +292,15 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           if (!response.ok) {
             console.warn(`Failed to activate character, body: ${stringifiedBody}`);
             console.error("Failed to activate character, response:", await response.text());
+            predictedStatsRef.current = [];
           } else {
             console.log("Character activated");
             await refreshMatch();
+            predictedStatsRef.current = [];
           }
         } catch (error) {
           console.error("Error activating character:", error);
+          predictedStatsRef.current = [];
         }
       };
       // if (cell.offset == 168) {
@@ -306,23 +316,29 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const CELL_SIZE_Y = 4;
 
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
+      if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         try {
-          setPredictedMoves(createMovePrediction(roomId, floor, undefined, match.builders[BUILDER_ID].character, match, times));
+          const builderCharacter = match.builders[BUILDER_ID].character;
+          const movePrediction = createMovePrediction(roomId, floor, undefined, builderCharacter, match, times);
+          const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+          if (movePrediction.length > 0) {
+            predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
+          }
+          setPredictedMoves(movePrediction);
           const moveBody = {
             account,
             character: builderOffset,
             room: roomId,
             floor,
+            isForcedTurnEnd,
           };
 
           getSynth().playSquare(220);
 
-          // 1️⃣ End turn (refresh happens inside if needed)
-          await autoTurnEnding(false, true);
           const stringifyMoveBody = JSON.stringify(moveBody);
 
-          // 2️⃣ Move character (WAIT for it)
+          // Move character (WAIT for it)
           const res = await fetch(
             `${API_BASE}/api/match/${match.filename}/move_character`,
             {
@@ -332,6 +348,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             }
           );
 
+          console.log("Move request (non-JSON):", stringifyMoveBody);
           const bodyText = await res.text();
 
           if (!res.ok) {
@@ -345,16 +362,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           if (bodyText.trim().startsWith("{") || bodyText.trim().startsWith("[")) {
             console.log("✅ Move success:", JSON.parse(bodyText));
           } else {
-            console.log("✅ Move success request (non-JSON):", stringifyMoveBody);
             console.log("✅ Move success response (non-JSON):", bodyText);
           }
 
           // 4️⃣ Refresh AFTER move completes
           await refreshMatch();
+          predictedStatsRef.current = [];
 
         } catch (err) {
           console.error("❌ Floor move failed:", err);
           setPredictedMoves([]);
+          predictedStatsRef.current = [];
         }
       });
     }
@@ -372,10 +390,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
 
     function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string, nextViewedRoomId?: number) {
+      if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
-        setPredictedMoves(createMovePrediction(roomId, undefined, direction, match.builders[BUILDER_ID].character, match, times));
-        const moveBody = { account, character: builderOffset, room: roomId, direction };
-        await autoTurnEnding(false, true);
+        const builderCharacter = match.builders[BUILDER_ID].character;
+        const movePrediction = createMovePrediction(roomId, undefined, direction, builderCharacter, match, times);
+        const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+        if (movePrediction.length > 0) {
+          predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
+        }
+        setPredictedMoves(movePrediction);
+        getSynth().playSquare(220);
+        const moveBody = { account, character: builderOffset, room: roomId, direction, isForcedTurnEnd };
         fetch(`${API_BASE}/api/match/${match.filename}/${route}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -396,6 +421,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             }
 
             await refreshMatch();
+            predictedStatsRef.current = [];
 
             // 🚀 Immediately switch room if doorway leads to adjacent room
             const wall = room.walls[direction];
@@ -411,15 +437,18 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           .catch(err => {
             console.error("❌ Move failed:", err);
             setPredictedMoves([]);
+            predictedStatsRef.current = [];
           });
       });
     }
 
     function setClickableLock(drawX: number, drawY: number, direction: number) {
+      if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         await autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         const stringifiedBody = JSON.stringify(moveBody);
+        getSynth().playSquare(220);
         fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -509,9 +538,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
     for (const item of player.inventory.items) {
       const onClick = !item.isActionable ? undefined : async () => {
-        await autoTurnEnding(true, false);
         try {
-          const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index };
+          getSynth().playSquare(220);
+          const builderCharacter = match.builders[BUILDER_ID].character;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+          const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index, isForcedTurnEnd };
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_inventory_item`, {
             method: "POST",
             headers: {
@@ -522,12 +554,15 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           if (!response.ok) {
             console.warn(`Failed to activate inventory item, body: ${activateBody}`);
             console.error("Failed to activate inventory item, response:", await response.text());
+            predictedStatsRef.current = [];
           } else {
             console.log("Inventory item activated");
             await refreshMatch();
+            predictedStatsRef.current = [];
           }
         } catch (error) {
           console.error("Error activating inventory item:", error);
+          predictedStatsRef.current = [];
         }
       };
 

@@ -101,6 +101,31 @@ export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: K
   // return target.animation == source.animation && source.t1 + timeout >= target.t0;
 }
 
+// ── Stat prediction keyframes ─────────────────────────────────────────────────
+// These track predicted changes to character stats (moves/actions remaining).
+// They are kept separate from movement keyframes so they don't trigger the
+// AnimatedCharacter overlay. data = [from, 0, to, 0].
+
+export function predictedMovesRemaining(base: number, pending: Keyframe[]): number {
+  return base - pending.filter(k => k.animation === 'MOVE_DECREMENT').length;
+}
+
+export function predictedActionsRemaining(base: number, pending: Keyframe[]): number {
+  return base - pending.filter(k => k.animation === 'ACTION_DECREMENT').length;
+}
+
+export function createMoveDecrementPrediction(baseMoves: number, pending: Keyframe[], times: TimeRef): Keyframe {
+  const from = predictedMovesRemaining(baseMoves, pending);
+  const t = performance.now() - times.serverToClientOffset;
+  return { animation: 'MOVE_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, 0, Math.max(0, from - 1), 0] };
+}
+
+export function createActionDecrementPrediction(baseActions: number, pending: Keyframe[], times: TimeRef): Keyframe {
+  const from = predictedActionsRemaining(baseActions, pending);
+  const t = performance.now() - times.serverToClientOffset;
+  return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, 0, Math.max(0, from - 1), 0] };
+}
+
 export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef): Keyframe[] {
     // check the moves
     if (character.remainingMoves <= 0) {
