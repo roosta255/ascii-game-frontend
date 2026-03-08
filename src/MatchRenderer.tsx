@@ -638,6 +638,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
       if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
+        if (item.stacks > 1) {
+          const sx = itemDraw[0] + 3;
+          const sy = itemDraw[1] + 5;
+          if (globals.glyphs[sy]?.[sx]) {
+            globals.glyphs[sy][sx] = { char: String(item.stacks), fg: 0xffffff, bg: 0x000000 };
+          }
+        }
       }
     }
   }
