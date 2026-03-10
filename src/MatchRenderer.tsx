@@ -205,7 +205,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(80, isMobile && (showInventory || showCharacter) ? 70 : 42),
+    glyphs: createBlankCanvas(80, isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
   };
 
   
@@ -350,7 +350,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const label = PAGE_LABELS[p];
       const isActive = sheetPage === p;
       const pageCopy = p;
-      if (isActive) {
+      const pageEmpty = (sheet[p] ?? []).length === 0;
+      if (pageEmpty) {
+        writeText(tx, oy, label, 0x333333, BG);
+      } else if (isActive) {
         for (let bx = tx - 1; bx <= tx + label.length; bx++) {
           if (globals.glyphs[oy - 1]?.[bx]) globals.glyphs[oy - 1][bx] = { char: '\u2584', fg: HIGHLIGHT, bg: BG };
         }
@@ -866,10 +869,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     </div>
     {isMobile && (
       <div style={{ marginTop: "0.5rem" }}>
-        <button onClick={() => { setShowInventory(v => !v); setShowCharacter(false); }}>
-          {showInventory ? "Close Inventory" : "Inventory"}
-        </button>
-        <button onClick={() => { setShowCharacter(v => !v); setShowInventory(false); }}>
+        {!player.inventory.isEmpty && (
+          <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowInventory(v => !v); setShowCharacter(false); }}>
+            {showInventory ? "Close Inventory" : "Inventory"}
+          </button>
+        )}
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); }}>
           {showCharacter ? "Close Character" : "Character"}
         </button>
       </div>
