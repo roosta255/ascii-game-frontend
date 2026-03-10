@@ -57,6 +57,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const naturalCanvasWidthRef = useRef(0);
   const isMobile = useIsMobile();
   const [showInventory, setShowInventory] = useState(false);
+  const [showCharacter, setShowCharacter] = useState(false);
+  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character'>('inventory');
+  const [sheetPage, setSheetPage] = useState('attributes');
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
   // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
@@ -202,7 +205,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(80, isMobile && showInventory ? 70 : 42),
+    glyphs: createBlankCanvas(80, isMobile && (showInventory || showCharacter) ? 70 : 42),
   };
 
   
@@ -282,6 +285,148 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           globals.glyphs[gy][gx].onClick = () => onClick();
         }
       }
+    }
+  }
+
+  function writeText(x: number, y: number, text: string, fg: number, bg: number, onClick?: () => void) {
+    for (let i = 0; i < text.length; i++) {
+      if (globals.glyphs[y]?.[x + i]) {
+        globals.glyphs[y][x + i] = { char: text[i], fg, bg, onClick };
+      }
+    }
+  }
+
+  function formatTrait(name: string): string {
+    return name.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function drawCharacterSheetAt(offset: [number, number]) {
+    const sheet = match.builders[BUILDER_ID].character.sheet;
+    if (!sheet) return;
+
+    const [ox, oy] = offset;
+    const WIDTH = 39;
+    const BG        = 0x000000;
+    const HIGHLIGHT  = 0x888888;
+    const DARK_GRAY  = 0x555555;
+    const LIGHT_GRAY = 0xaaaaaa;
+    const PRESENT_FG = 0x88bb88;
+    const ABSENT_FG  = 0xbb8888;
+
+    // Writes a sequence of colored words with word-wrap; returns the next row.
+    type CW = { word: string; fg: number };
+    function writeWords(startX: number, startRow: number, words: CW[], indent: number = 0): number {
+      let x = startX;
+      let y = startRow;
+      let lineStart = true;
+      for (const { word, fg } of words) {
+        if (!lineStart) {
+          const needsWrap = x + 1 + word.length > ox + WIDTH;
+          if (needsWrap) {
+            y++;
+            x = ox + indent;
+            lineStart = true;
+          } else {
+            if (globals.glyphs[y]?.[x]) globals.glyphs[y][x] = { char: ' ', fg: DARK_GRAY, bg: BG };
+            x++;
+          }
+        }
+        writeText(x, y, word, fg, BG);
+        x += word.length;
+        lineStart = false;
+      }
+      return y + 1;
+    }
+
+    const PAGES = ['roles', 'attributes', 'capabilities', 'states', 'afflictions', 'debuffs', 'characters'];
+    const PAGE_LABELS: Record<string, string> = {
+      roles: 'ROLE', attributes: 'ATTR', capabilities: 'CAPA',
+      states: 'STAT', afflictions: 'AFFL', debuffs: 'DEBT', characters: 'CHAR',
+    };
+
+    // Page tabs
+    let tx = ox;
+    for (const p of PAGES) {
+      const label = PAGE_LABELS[p];
+      const isActive = sheetPage === p;
+      const pageCopy = p;
+      if (isActive) {
+        for (let bx = tx - 1; bx <= tx + label.length; bx++) {
+          if (globals.glyphs[oy - 1]?.[bx]) globals.glyphs[oy - 1][bx] = { char: '\u2584', fg: HIGHLIGHT, bg: BG };
+        }
+        if (globals.glyphs[oy]?.[tx - 1])           globals.glyphs[oy][tx - 1]           = { char: '\u2590', fg: HIGHLIGHT, bg: BG };
+        writeText(tx, oy, label, 0x000000, HIGHLIGHT, () => setSheetPage(pageCopy));
+        if (globals.glyphs[oy]?.[tx + label.length]) globals.glyphs[oy][tx + label.length] = { char: '\u258c', fg: HIGHLIGHT, bg: BG };
+      } else {
+        writeText(tx, oy, label, DARK_GRAY, BG, () => setSheetPage(pageCopy));
+      }
+      tx += label.length + 1;
+    }
+
+    // Separator
+    writeText(ox, oy + 1, '\u2500'.repeat(WIDTH), 0x444444, BG);
+
+    const traits: any[] = sheet[sheetPage] ?? [];
+    const isAttributePage = sheetPage === 'attributes';
+    let row = oy + 2;
+
+    for (const trait of traits) {
+      if (row >= globals.glyphs.length) break;
+      const nameFg = !trait.isPresent ? ABSENT_FG : trait.upstream.length > 0 ? PRESENT_FG : LIGHT_GRAY;
+      const nameWords = formatTrait(trait.trait).toLowerCase().split(' ');
+
+      if (isAttributePage) {
+        // Line 1: "<name> grants <down1> & <down2> ..."
+        const line1: CW[] = nameWords.map(w => ({ word: w, fg: nameFg }));
+        if (trait.downstream.length > 0) {
+          line1.push({ word: 'grants', fg: DARK_GRAY });
+          for (let i = 0; i < trait.downstream.length; i++) {
+            if (i > 0) line1.push({ word: '&', fg: DARK_GRAY });
+            line1.push({ word: formatTrait(trait.downstream[i]).toLowerCase(), fg: LIGHT_GRAY });
+          }
+        }
+        row = writeWords(ox, row, line1, 2);
+
+        // Line 2: "* gained from <up1> & <up2> ..."
+        if (trait.upstream.length > 0) {
+          if (row >= globals.glyphs.length) break;
+          const line2: CW[] = [
+            { word: '*', fg: DARK_GRAY },
+            { word: 'gained', fg: DARK_GRAY },
+            { word: 'from', fg: DARK_GRAY },
+          ];
+          for (let i = 0; i < trait.upstream.length; i++) {
+            if (i > 0) line2.push({ word: '&', fg: DARK_GRAY });
+            line2.push({ word: formatTrait(trait.upstream[i]).toLowerCase(), fg: LIGHT_GRAY });
+          }
+          row = writeWords(ox, row, line2, 2);
+        }
+      } else {
+        // Standard page: ". Name" or "* Name"
+        const icon = trait.isPresent ? '*' : '.';
+        const line1: CW[] = [{ word: icon, fg: DARK_GRAY }, ...nameWords.map(w => ({ word: w, fg: nameFg }))];
+        row = writeWords(ox, row, line1, 2);
+
+        if (trait.upstream.length > 0 && row < globals.glyphs.length) {
+          const upWords: CW[] = [{ word: 'cause:', fg: DARK_GRAY }];
+          for (let i = 0; i < trait.upstream.length; i++) {
+            if (i > 0) upWords.push({ word: '&', fg: DARK_GRAY });
+            upWords.push({ word: formatTrait(trait.upstream[i]).toLowerCase(), fg: LIGHT_GRAY });
+          }
+          row = writeWords(ox + 2, row, upWords, 2);
+        }
+        if (trait.downstream.length > 0 && row < globals.glyphs.length) {
+          const downWords: CW[] = [{ word: 'effect:', fg: DARK_GRAY }];
+          for (let i = 0; i < trait.downstream.length; i++) {
+            if (i > 0) downWords.push({ word: '&', fg: DARK_GRAY });
+            downWords.push({ word: formatTrait(trait.downstream[i]).toLowerCase(), fg: LIGHT_GRAY });
+          }
+          row = writeWords(ox + 2, row, downWords, 2);
+        }
+      }
+
+      // Blank line between entries
+      row++;
     }
   }
 
@@ -650,9 +795,39 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
   if (!isMobile) {
-    drawInventoryAt([41, 13]);
+    // Panel toggle tabs
+    const PANEL_HL = 0x888888;
+    const invActive = rightPanelMode === 'inventory';
+    const chrActive = rightPanelMode === 'character';
+    if (invActive) {
+      for (let bx = 40; bx <= 50; bx++) {
+        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+      }
+      if (globals.glyphs[11]?.[40]) globals.glyphs[11][40] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(41, 11, 'INVENTORY', 0x000000, PANEL_HL, () => setRightPanelMode('inventory'));
+      if (globals.glyphs[11]?.[50]) globals.glyphs[11][50] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+    } else {
+      writeText(41, 11, 'INVENTORY', 0x555555, 0x000000, () => setRightPanelMode('inventory'));
+    }
+    if (chrActive) {
+      for (let bx = 50; bx <= 60; bx++) {
+        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+      }
+      if (globals.glyphs[11]?.[50]) globals.glyphs[11][50] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(51, 11, 'CHARACTER', 0x000000, PANEL_HL, () => setRightPanelMode('character'));
+      if (globals.glyphs[11]?.[60]) globals.glyphs[11][60] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+    } else {
+      writeText(51, 11, 'CHARACTER', 0x555555, 0x000000, () => setRightPanelMode('character'));
+    }
+    if (rightPanelMode === 'inventory') {
+      drawInventoryAt([41, 13]);
+    } else {
+      drawCharacterSheetAt([41, 13]);
+    }
   } else if (showInventory) {
     drawInventoryAt([0, 41]);
+  } else if (showCharacter) {
+    drawCharacterSheetAt([0, 41]);
   }
 
   const animationTime = performance.now() - times.serverToClientOffset;
@@ -690,9 +865,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       </div>
     </div>
     {isMobile && (
-      <button onClick={() => setShowInventory(v => !v)} style={{ marginTop: "0.5rem" }}>
-        {showInventory ? "Close Inventory" : "Inventory"}
-      </button>
+      <div style={{ marginTop: "0.5rem" }}>
+        <button onClick={() => { setShowInventory(v => !v); setShowCharacter(false); }}>
+          {showInventory ? "Close Inventory" : "Inventory"}
+        </button>
+        <button onClick={() => { setShowCharacter(v => !v); setShowInventory(false); }}>
+          {showCharacter ? "Close Character" : "Character"}
+        </button>
+      </div>
     )}
   </div>
 );
