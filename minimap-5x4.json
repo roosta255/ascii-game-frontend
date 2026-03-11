@@ -6,7 +6,9 @@
     "offset": [1, 15],
     "default": [2, 3],
     "sprites": {
-        "INVENTORY": [2,2]
+        "INVENTORY": [2,2],
+        "CHEST_6_LOCKED": [3,3],
+        "CHEST_6_UNLOCKED": [2,3]
     },
     "spritesWithHorizontalFlip": {},
     "spritesWithVerticalFlip": {},
