@@ -46,6 +46,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [itemPainter, setItemPainter] = useState<Painter | null>(null);
   const [doorPainter, setDoorPainter] = useState<Painter | null>(null);
   const [lockPainter, setLockPainter] = useState<Painter | null>(null);
+  const [chestLockPainter, setChestLockPainter] = useState<Painter | null>(null);
   const [roomPropLoader, setRoomPropLoader] = useState<RoomPropLoader | null>(null);
   const [doorwayPainter, setDoorwayPainter] = useState<Painter | null>(null);
   const [backgroundPainter, setBackgroundPainter] = useState<Painter | null>(null);
@@ -58,7 +59,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const isMobile = useIsMobile();
   const [showInventory, setShowInventory] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
-  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character'>('inventory');
+  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character' | 'chest'>('inventory');
+  const [selectedChestId, setSelectedChestId] = useState<number | null>(null);
   const [sheetPage, setSheetPage] = useState('attributes');
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
@@ -135,6 +137,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     Painter.load(`${import.meta.env.BASE_URL}locks.json`)
       .then(setLockPainter)
       .catch(err => console.error("❌ Failed to load locks.json:", err));
+
+    Painter.load(`${import.meta.env.BASE_URL}chest_locks.json`)
+      .then(setChestLockPainter)
+      .catch(err => console.error("❌ Failed to load chest_locks.json:", err));
   }, []);
 
   useEffect(() => {
@@ -173,7 +179,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && roomPropLoader && doorPainter && lockPainter && doorwayPainter && backgroundPainter && iconsTexture && match;
+  const isRenderReady = backgroundTexture && spriteMeta && itemPainter && minimapTexture && rolePainter && roomPropLoader && doorPainter && lockPainter && chestLockPainter && doorwayPainter && backgroundPainter && iconsTexture && match;
   const isAnimationReady = isRenderReady && cellSize && renderTime;
 
   if (!isAnimationReady) {
@@ -201,11 +207,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       doors: doorPainter,
       items: itemPainter,
       locks: lockPainter,
+      chestLocks: chestLockPainter,
       roles: rolePainter,
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(80, isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
+    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
   };
 
   
@@ -222,6 +229,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // console.log("🧭 Rendering room ID:", viewedRoomId, room);
   const effectiveCharacters = getAllCharacters(match).map(c => applyClientKeyframesToCharacter(c));
   const offsetMap = Object.fromEntries(effectiveCharacters.map((c: any) => [c.offset, c]));
+
+  const chestOffsetMap: Record<number, number> = {};
+  (match.dungeon.chests ?? []).forEach((chest: any, index: number) => {
+    if (chest.containerCharacterId != null) chestOffsetMap[chest.containerCharacterId] = index;
+  });
+
   const account = match.builders[BUILDER_ID].player.account;
   const player = match.builders[BUILDER_ID].player;
   const times = timeRef.current;
@@ -444,6 +457,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       // animations check
 
       if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) return;
+      const chestIndex = chestOffsetMap[character.offset];
+      if (chestIndex != null) {
+        globals.painters.roles.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick: () => { setSelectedChestId(chestIndex); setRightPanelMode('chest'); }}});
+        return;
+      }
       const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
         try {
           const builderCharacter = match.builders[BUILDER_ID].character;
@@ -797,6 +815,62 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   }
 
+  function drawChestAt(offset: [number, number], chest: any) {
+    const spriteName = chest.isLocked ? 'CHEST_6_LOCKED' : 'CHEST_6_UNLOCKED';
+    globals.textures.minimap.draw(globals.glyphs, spriteName, offset[0], offset[1], 0);
+    const containerCharacterId = chest.containerCharacterId;
+    const CELL_SIZE_X = 5;
+    const CELL_SIZE_Y = 4;
+    if (chest.isLocked) {
+      const lockDrawX = offset[0] + 15;
+      const lockDrawY = offset[1] + 7;
+      globals.painters.chestLocks.draw(chest.lock, {globals, locals: {coords: [lockDrawX, lockDrawY], direction: 0}});
+      markRegionClickable(lockDrawX, lockDrawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        try {
+          getSynth().playSquare(220);
+          const builderCharacter = match.builders[BUILDER_ID].character;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+          const body = {action: 'USE_CHEST_LOCK', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, isForcedTurnEnd};
+          const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+          });
+          if (!response.ok) { console.error('Failed to use chest lock:', await response.text()); predictedStatsRef.current = []; }
+          else { console.log('✅ Chest lock activated'); await refreshMatch(); predictedStatsRef.current = []; }
+        } catch (error) { console.error('Error using chest lock:', error); predictedStatsRef.current = []; }
+      });
+    } else {
+      const CHEST_ITEMS_WIDE = 3;
+      const itemGrid: GridCalculator = {position: offset, offset: [3, 3], stride: [6, 6]};
+      for (const item of (chest.inventory?.items ?? [])) {
+        if (item.type === 'NIL') continue;
+        const itemCell: [number, number] = [item.index % CHEST_ITEMS_WIDE, Math.floor(item.index / CHEST_ITEMS_WIDE)];
+        const itemDraw: [number, number] = calculatePosition(itemGrid, itemCell);
+        const capturedIndex = item.index;
+        const onClick = async () => {
+          try {
+            getSynth().playSquare(220);
+            const builderCharacter = match.builders[BUILDER_ID].character;
+            const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+            predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+            const body = {action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, item: capturedIndex, isForcedTurnEnd};
+            const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
+              method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+            });
+            if (!response.ok) { console.error('Failed to loot chest:', await response.text()); predictedStatsRef.current = []; }
+            else { console.log('✅ Chest item looted'); await refreshMatch(); predictedStatsRef.current = []; }
+          } catch (error) { console.error('Error looting chest:', error); predictedStatsRef.current = []; }
+        };
+        globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
+        if (item.stacks > 1) {
+          const sx = itemDraw[0] + 3;
+          const sy = itemDraw[1] + 5;
+          if (globals.glyphs[sy]?.[sx]) globals.glyphs[sy][sx] = {char: String(item.stacks), fg: 0xffffff, bg: 0x000000};
+        }
+      }
+    }
+  }
+
   if (!isMobile) {
     // Panel toggle tabs
     const PANEL_HL = 0x888888;
@@ -822,7 +896,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     } else {
       writeText(51, 11, 'CHARACTER', 0x555555, 0x000000, () => setRightPanelMode('character'));
     }
-    if (rightPanelMode === 'inventory') {
+    const chest = selectedChestId != null ? (match.dungeon.chests ?? [])[selectedChestId] : null;
+    if (rightPanelMode === 'chest' && chest) {
+      drawInventoryAt([41, 13]);
+      drawChestAt([76, 13], chest);
+    } else if (rightPanelMode === 'inventory') {
       drawInventoryAt([41, 13]);
     } else {
       drawCharacterSheetAt([41, 13]);

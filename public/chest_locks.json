@@ -1,0 +1,16 @@
+{
+    "KEY_CATALYST_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "KEY_CONSUMER_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYLESS",
+            "palette": 0
+        }
+    }
+}

@@ -18,5 +18,15 @@
             "bleedable": false,
             "sleepable": false
         }
+    },
+    "CHEST": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 3,
+            "eyes": 3,
+            "sprite": "CHEST",
+            "bleedable": false,
+            "sleepable": false
+        }
     }
 }

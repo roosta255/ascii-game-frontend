@@ -13,6 +13,7 @@ interface PainterProps {
     items: Painter;
     roles: Painter;
     locks: Painter;
+    chestLocks: Painter;
     backgrounds: Painter;
     doorways: Painter;
 };
