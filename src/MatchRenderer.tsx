@@ -212,7 +212,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
+    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
   };
 
   
@@ -905,6 +905,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     } else {
       drawCharacterSheetAt([41, 13]);
     }
+  } else if (isMobile && selectedChestId != null && (match.dungeon.chests ?? [])[selectedChestId]) {
+    drawInventoryAt([0, 41]);
+    drawChestAt([0, 66], (match.dungeon.chests ?? [])[selectedChestId]);
   } else if (showInventory) {
     drawInventoryAt([0, 41]);
   } else if (showCharacter) {
@@ -946,13 +949,18 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       </div>
     </div>
     {isMobile && (
-      <div style={{ marginTop: "0.5rem" }}>
+      <div style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+        {selectedChestId != null && (
+          <button style={{ padding: "0.75rem 1rem" }} onClick={() => setSelectedChestId(null)}>
+            Close Chest
+          </button>
+        )}
         {!player.inventory.isEmpty && (
-          <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowInventory(v => !v); setShowCharacter(false); }}>
+          <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowInventory(v => !v); setShowCharacter(false); setSelectedChestId(null); }}>
             {showInventory ? "Close Inventory" : "Inventory"}
           </button>
         )}
-        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); }}>
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); setSelectedChestId(null); }}>
           {showCharacter ? "Close Character" : "Character"}
         </button>
       </div>
