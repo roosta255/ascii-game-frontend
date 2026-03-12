@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, ReactElement } from "react";
 import { getSynth } from "./audio/index";
 import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
@@ -709,14 +709,29 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     for (var i = 0; i < 4; i++) {
       {
+        const wall = room.walls[i];
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
-        const cell = room.walls[i].cell;
-        
-        globals.painters.doors.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-        if (room.walls[i].isDoorActionable) {
+        const cell = wall.cell;
+
+        if (wall.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+          animatedExtras.push(
+            <AnimatedCharacter
+              key={`wall-${i}-door`}
+              character={wall}
+              animationTime={animationTime}
+              globals={rebuildGlyphs(globals, 5, 4)}
+              room={roomProps}
+              drawSprite={(g) => g.painters.doors.draw(wall.door, {globals: g, locals: {coords: [0, 0], direction: 0}})}
+            />
+          );
+        } else {
+          globals.painters.doors.draw(wall.door, {globals, locals: {coords: [dx, dy], direction: 0}});
+        }
+
+        if (wall.isDoorActionable) {
           let nextViewedRoomId: number | undefined;
 
-          switch (room.walls[i].door) {
+          switch (wall.door) {
             case "LADDER_1_BOTTOM":
             case "POLE_1_BOTTOM":
               nextViewedRoomId = room.above;
@@ -742,20 +757,39 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
           setClickableDoorway(dx, dy, i, "activate_door", nextViewedRoomId);
         }
-        else if (!room.walls[i].isBlocking) {
-          setClickableDoorway(dx, dy, i, "move_character", room.walls[i].adjacent);
+        else if (!wall.isBlocking) {
+          setClickableDoorway(dx, dy, i, "move_character", wall.adjacent);
         }
         drawCharacterAt(dx, dy, cell);
       }
       {
+        const wall = room.walls[i];
         let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
-        globals.painters.locks.draw(room.walls[i].door, {globals, locals: {coords: [dx, dy], direction: 0}});
-        if (room.walls[i].isLockActionable) {
+
+        if (wall.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+          animatedExtras.push(
+            <AnimatedCharacter
+              key={`wall-${i}-lock`}
+              character={wall}
+              animationTime={animationTime}
+              globals={rebuildGlyphs(globals, 5, 4)}
+              room={roomProps}
+              drawSprite={(g) => g.painters.locks.draw(wall.door, {globals: g, locals: {coords: [0, 0], direction: 0}})}
+            />
+          );
+        } else {
+          globals.painters.locks.draw(wall.door, {globals, locals: {coords: [dx, dy], direction: 0}});
+        }
+
+        if (wall.isLockActionable) {
           setClickableLock(dx, dy, i);
         }
       }
     }
   }
+
+  const animationTime = performance.now() - times.serverToClientOffset;
+  const animatedExtras: ReactElement[] = [];
 
   drawRoomAt(0, 0, room, viewedRoomId);
 
@@ -802,7 +836,18 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
       const itemCell: [number, number] = [item.index % INVENTORY_WIDTH, Math.floor(item.index / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
-      if (item.type !== "NIL") {
+      if (item.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+        animatedExtras.push(
+          <AnimatedCharacter
+            key={`item-${item.index}`}
+            character={item}
+            animationTime={animationTime}
+            globals={rebuildGlyphs(globals, 6, 6)}
+            room={roomProps}
+            drawSprite={(g) => g.painters.items.draw(item.type, {globals: g, locals: {coords: [0, 0], onClick}})}
+          />
+        );
+      } else if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
         if (item.stacks > 1) {
           const sx = itemDraw[0] + 3;
@@ -914,7 +959,19 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     drawCharacterSheetAt([0, 41]);
   }
 
-  const animationTime = performance.now() - times.serverToClientOffset;
+  for (const character of effectiveCharacters) {
+    if (character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+      animatedExtras.push(
+        <AnimatedCharacter
+          key={`character-${character.offset}`}
+          character={character}
+          animationTime={animationTime}
+          globals={rebuildGlyphs(globals, 5, 4)}
+          room={roomProps}
+        />
+      );
+    }
+  }
 
   // Capture the natural canvas width once (at base font-size, before any scaling).
   // CSS font-size changes alter scrollWidth so we store the baseline to avoid feedback loops.
@@ -933,18 +990,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       <div ref={sceneRef} className="scene" style={{ fontSize: `${targetFontSize}px` }}>
         <pre>{blockToText(globals.glyphs)}</pre>
         <div className="overlay">
-          {effectiveCharacters.map(character => applyClientKeyframesToCharacter(character)).map(character =>
-            character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))
-              ? (
-                <AnimatedCharacter
-                  character={character}
-                  animationTime={animationTime}
-                  globals={rebuildGlyphs(globals, 5,4)}
-                  room={roomProps}
-                />
-              )
-              : null
-          )}
+          {animatedExtras}
         </div>
       </div>
     </div>

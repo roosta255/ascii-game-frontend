@@ -15,11 +15,13 @@ export function AnimatedCharacter({
   animationTime,
   globals,
   room,
+  drawSprite,
 }: {
   character: any;
   animationTime: number;
   globals: DrawerProps;
   room: RoomProps;
+  drawSprite?: (globals: DrawerProps) => void;
 }) {
   const keyframe = digestKeyframes(character.keyframes, animationTime, room);
 
@@ -32,7 +34,11 @@ export function AnimatedCharacter({
   const x = Math.floor(keyframe.curve(x0, x1, progress));
   const y = Math.floor(keyframe.curve(y0, y1, progress));
 
-  globals.painters.roles.draw(character.role, {globals, locals: {coords: [0, 0]}});
+  if (drawSprite) {
+    drawSprite(globals);
+  } else {
+    globals.painters.roles.draw(character.role, {globals, locals: {coords: [0, 0]}});
+  }
 
   return (
     <div
