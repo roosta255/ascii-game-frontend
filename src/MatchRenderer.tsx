@@ -869,7 +869,20 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     if (chest.isLocked) {
       const lockDrawX = offset[0] + 15;
       const lockDrawY = offset[1] + 7;
-      globals.painters.chestLocks.draw(chest.lock, {globals, locals: {coords: [lockDrawX, lockDrawY], direction: 0}});
+      if (chest.lock?.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+        animatedExtras.push(
+          <AnimatedCharacter
+            key={`chest-lock-${containerCharacterId}`}
+            character={chest.lock}
+            animationTime={animationTime}
+            globals={rebuildGlyphs(globals, 5, 4)}
+            room={roomProps}
+            drawSprite={(g) => g.painters.chestLocks.draw(chest.lock, {globals: g, locals: {coords: [0, 0], direction: 0}})}
+          />
+        );
+      } else {
+        globals.painters.chestLocks.draw(chest.lock, {globals, locals: {coords: [lockDrawX, lockDrawY], direction: 0}});
+      }
       markRegionClickable(lockDrawX, lockDrawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
         try {
           getSynth().playSquare(220);
