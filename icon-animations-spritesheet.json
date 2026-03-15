@@ -1,0 +1,15 @@
+{
+    "path": "icon-animations-spritesheet.xp",
+    "palettes": 24,
+    "size": [13, 12],
+    "stride": [14, 13],
+    "grid-offset": [1, 25],
+    "draw-offset": [4, 4],
+    "default": [11, 16],
+    "spritesheet": {
+        "CRUSH": {"start": [0,0], "length": 6, "palette": [1]},
+        "SLIDE": {"start": [0,1], "length": 6, "palette": [1]},
+        "RISE": {"start": [0,2], "length": 8, "palette": [1]},
+        "FALL": {"start": [0,3], "length": 6, "palette": [1]}
+    }
+}
