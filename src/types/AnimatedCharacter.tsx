@@ -113,11 +113,11 @@ export function AnimatedCharacter({
     const [sw, sh] = globals.textures.icons.meta.size;
     const makeBuffer = (): AsciiGlyph[][] =>
       Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
-    if (beforeName) {
+    if (beforeName && activeKeyframe.data[0] !== 0) {
       beforeGlyphs = makeBuffer();
       tp.draw(beforeName, { globals: { ...globals, glyphs: beforeGlyphs }, locals: { coords: [0, 0], direction: 0 } });
     }
-    if (afterName) {
+    if (afterName && activeKeyframe.data[1] !== 0) {
       afterGlyphs = makeBuffer();
       tp.draw(afterName, { globals: { ...globals, glyphs: afterGlyphs }, locals: { coords: [0, 0], direction: 0 } });
     }
