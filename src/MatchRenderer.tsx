@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, ReactElement } from "reac
 import { getSynth } from "./audio/index";
 import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
-import { Painter } from "./assets/Painter";
+import { SpritesheetPainter } from "./assets/SpritesheetPainter";
+import { Painter, FlyweightEntry, AnimationFlyweight } from "./assets/Painter";
 import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
@@ -51,8 +52,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [doorwayPainter, setDoorwayPainter] = useState<Painter | null>(null);
   const [backgroundPainter, setBackgroundPainter] = useState<Painter | null>(null);
   const [iconsTexture, setIconsTexture] = useState<Texture | null>(null);
+  const [animationSheet, setAnimationSheet] = useState<SpritesheetPainter | null>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
-  
+  const [flyweights, setFlyweights] = useState<{ roles: FlyweightEntry[]; doors: FlyweightEntry[]; locks: FlyweightEntry[]; items: FlyweightEntry[]; animations: AnimationFlyweight[]; } | null>(null);
+
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const naturalCanvasWidthRef = useRef(0);
@@ -70,6 +73,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // Synchronous refs for movement prediction chaining between rapid clicks.
   const predictedMovesRef = useRef<Keyframe[]>([]);
   const predictedLocationRef = useRef<{ type: string; data: number; t1: number } | null>(null);
+  // Tracks the local performance.now() timestamp when a short non-predicted keyframe was first seen.
+  // Key: `${animation}_${t0}`. Used to play short animations to completion regardless of server clock lag.
+  const shortAnimClocksRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -110,6 +116,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       })
       .catch(err => console.error("❌ Failed to load icons:", err));
 
+    SpritesheetPainter.load(
+      `${import.meta.env.BASE_URL}icon-animations-spritesheet.json`,
+      import.meta.env.BASE_URL,
+    )
+      .then(setAnimationSheet)
+      .catch(err => console.error("❌ Failed to load icon-animations-spritesheet:", err));
+
     RoomPropLoader.load(`${import.meta.env.BASE_URL}rooms.json`)
       .then(setRoomPropLoader)
       .catch(err => console.error("❌ Failed to load rooms.json:", err));
@@ -141,7 +154,21 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     Painter.load(`${import.meta.env.BASE_URL}chest_locks.json`)
       .then(setChestLockPainter)
       .catch(err => console.error("❌ Failed to load chest_locks.json:", err));
+
+    fetch(`${API_BASE}/api/flyweights`)
+      .then(res => res.json())
+      .then(setFlyweights)
+      .catch(err => console.error("❌ Failed to load flyweights:", err));
   }, []);
+
+  useEffect(() => {
+    if (!flyweights) return;
+    if (rolePainter) rolePainter.setIndexMap(flyweights.roles);
+    if (itemPainter) itemPainter.setIndexMap(flyweights.items);
+    if (doorPainter) doorPainter.setIndexMap(flyweights.doors);
+    if (lockPainter) lockPainter.setIndexMap(flyweights.doors);
+    if (chestLockPainter) chestLockPainter.setIndexMap(flyweights.locks);
+  }, [flyweights, rolePainter, itemPainter, doorPainter, lockPainter, chestLockPainter]);
 
   useEffect(() => {
     if (!roomTransition) return;
@@ -202,6 +229,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       icons: iconsTexture,
       rooms: backgroundTexture,
       minimap: minimapTexture,
+      animationSheet: animationSheet ?? undefined,
     },
     painters: {
       doors: doorPainter,
@@ -216,6 +244,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   };
 
   
+  const animationFlyweights: Record<string, AnimationFlyweight> = Object.fromEntries(
+    (flyweights?.animations ?? []).map(a => [a.name, a])
+  );
+
   const BUILDER_ID = 0;
   const builderOffset = match.builders[BUILDER_ID].character.offset;
   function applyClientKeyframesToCharacter(character: any) {
@@ -713,15 +745,22 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
         const cell = wall.cell;
 
-        if (wall.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+        if (wall.door === "KEEPER_INGRESS_KEYED" && wall.keyframes?.some((k: Keyframe) => k.animation !== "NIL")){
+          console.log(wall.keyframes);
+        }
+        if (wall.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
           animatedExtras.push(
             <AnimatedCharacter
               key={`wall-${i}-door`}
-              character={wall}
+              keyframes={wall.keyframes}
+              painter={doorPainter!}
+              name={wall.door}
+              animationFlyweights={animationFlyweights}
               animationTime={animationTime}
+              localAnimationTime={entityLocalAnimTime(wall.keyframes)}
+              position={[dx, dy]}
               globals={rebuildGlyphs(globals, 5, 4)}
               room={roomProps}
-              drawSprite={(g) => g.painters.doors.draw(wall.door, {globals: g, locals: {coords: [0, 0], direction: 0}})}
             />
           );
         } else {
@@ -766,15 +805,20 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         const wall = room.walls[i];
         let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
 
-        if (wall.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+        if (wall.lockKeyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
           animatedExtras.push(
             <AnimatedCharacter
               key={`wall-${i}-lock`}
-              character={wall}
+              keyframes={wall.lockKeyframes}
+              painter={lockPainter!}
+              name={wall.door}
+              animationFlyweights={animationFlyweights}
               animationTime={animationTime}
+              localAnimationTime={entityLocalAnimTime(wall.lockKeyframes)}
+              position={[dx, dy]}
+              transitionPainter={doorPainter!}
               globals={rebuildGlyphs(globals, 5, 4)}
               room={roomProps}
-              drawSprite={(g) => g.painters.locks.draw(wall.door, {globals: g, locals: {coords: [0, 0], direction: 0}})}
             />
           );
         } else {
@@ -790,6 +834,34 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   const animationTime = performance.now() - times.serverToClientOffset;
   const animatedExtras: ReactElement[] = [];
+
+  // Returns the effective animation time for a keyframe.
+  // Short (<500ms) non-predicted keyframes get their own local clock so they
+  // always play to completion even when server latency cuts their visible window.
+  function getLocalAnimTime(k: Keyframe): number {
+    if (k.predicted || (k.t1 - k.t0) >= 500) return animationTime;
+    const key = `${k.animation}_${k.t0}`;
+    if (!shortAnimClocksRef.current.has(key)) {
+      shortAnimClocksRef.current.set(key, performance.now());
+    }
+    return k.t0 + (performance.now() - shortAnimClocksRef.current.get(key)!);
+  }
+
+  function isLocallyAnimating(k: Keyframe): boolean {
+    return isKeyframeAnimating(k, getLocalAnimTime(k));
+  }
+
+  // Returns the local clock time for the first qualifying short keyframe on an entity,
+  // or undefined if none qualify (caller falls back to global animationTime).
+  function entityLocalAnimTime(keyframes: Keyframe[]): number | undefined {
+    for (const k of keyframes) {
+      if (!k.predicted && (k.t1 - k.t0) < 500) {
+        const local = getLocalAnimTime(k);
+        if (isKeyframeAnimating(k, local)) return local;
+      }
+    }
+    return undefined;
+  }
 
   drawRoomAt(0, 0, room, viewedRoomId);
 
@@ -836,15 +908,19 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
       const itemCell: [number, number] = [item.index % INVENTORY_WIDTH, Math.floor(item.index / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
-      if (item.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+      if (item.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
         animatedExtras.push(
           <AnimatedCharacter
             key={`item-${item.index}`}
-            character={item}
+            keyframes={item.keyframes}
+            painter={itemPainter!}
+            name={item.type}
+            animationFlyweights={animationFlyweights}
             animationTime={animationTime}
+            localAnimationTime={entityLocalAnimTime(item.keyframes)}
+            position={itemDraw}
             globals={rebuildGlyphs(globals, 6, 6)}
             room={roomProps}
-            drawSprite={(g) => g.painters.items.draw(item.type, {globals: g, locals: {coords: [0, 0], onClick}})}
           />
         );
       } else if (item.type !== "NIL") {
@@ -869,15 +945,19 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     if (chest.isLocked) {
       const lockDrawX = offset[0] + 15;
       const lockDrawY = offset[1] + 7;
-      if (chest.lock?.keyframes?.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+      if (chest.lock?.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
         animatedExtras.push(
           <AnimatedCharacter
             key={`chest-lock-${containerCharacterId}`}
-            character={chest.lock}
+            keyframes={chest.lock.keyframes}
+            painter={chestLockPainter!}
+            name={chest.lock.type}
+            animationFlyweights={animationFlyweights}
             animationTime={animationTime}
+            localAnimationTime={entityLocalAnimTime(chest.lock.keyframes)}
+            position={[lockDrawX, lockDrawY]}
             globals={rebuildGlyphs(globals, 5, 4)}
             room={roomProps}
-            drawSprite={(g) => g.painters.chestLocks.draw(chest.lock, {globals: g, locals: {coords: [0, 0], direction: 0}})}
           />
         );
       } else {
@@ -973,12 +1053,16 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
   for (const character of effectiveCharacters) {
-    if (character.keyframes.some((k: Keyframe) => isKeyframeAnimating(k, animationTime))) {
+    if (character.keyframes.some((k: Keyframe) => isLocallyAnimating(k))) {
       animatedExtras.push(
         <AnimatedCharacter
           key={`character-${character.offset}`}
-          character={character}
+          keyframes={character.keyframes}
+          painter={rolePainter!}
+          name={character.role}
+          animationFlyweights={animationFlyweights}
           animationTime={animationTime}
+          localAnimationTime={entityLocalAnimTime(character.keyframes)}
           globals={rebuildGlyphs(globals, 5, 4)}
           room={roomProps}
         />

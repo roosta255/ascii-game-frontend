@@ -2,10 +2,21 @@
 
 import { Renderer, parseRenderer, RenderContext, render } from "./Renderer";
 
+export interface FlyweightEntry {
+    index: number;
+    name: string;
+}
+
+export interface AnimationFlyweight {
+    name: string;
+    isTransition: boolean;
+}
+
 // Textures map names -> Sprites
 // Painters map names -> Renderers.
 export class Painter {
     renderers: Record<string, Renderer> = {};
+    indexMap: Record<number, string> = {};
 
     constructor(renderers: Record<string, Renderer>) {
         this.renderers = renderers;
@@ -23,6 +34,13 @@ export class Painter {
         return new Painter(renderers);
     }
 
+    setIndexMap(entries: FlyweightEntry[]): void {
+        this.indexMap = {};
+        for (const { index, name } of entries) {
+            this.indexMap[index] = name;
+        }
+    }
+
     getRenderer(key: string): Renderer {
         const renderer = this.renderers[key];
         if (!renderer) {
@@ -35,5 +53,14 @@ export class Painter {
     draw(key: string, ctx: RenderContext): void {
         const renderer = this.getRenderer(key);
         render(renderer, ctx);
+    }
+
+    drawByIndex(index: number, ctx: RenderContext): void {
+        const name = this.indexMap[index];
+        if (name === undefined) {
+            console.warn(`No flyweight mapping for index ${index}.`);
+            return;
+        }
+        this.draw(name, ctx);
     }
 }

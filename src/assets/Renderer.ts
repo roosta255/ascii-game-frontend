@@ -71,6 +71,16 @@ const rendererHandlers: Record<string, RendererHandler> = {
     }
 };
 
+export function getRendererPalette(renderer: Renderer): number | null {
+    switch (renderer.type) {
+        case "CharacterRenderer":
+        case "SpriteRenderer":
+            return renderer.palette;
+        default:
+            return null;
+    }
+}
+
 export function render(renderer: Renderer, ctx: RenderContext): void {
     const x = ctx.locals.coords[0];
     const y = ctx.locals.coords[1];

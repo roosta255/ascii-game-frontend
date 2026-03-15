@@ -61,7 +61,32 @@ export class Texture {
 
   clone(): AsciiGlyph[][] {
     return this.layer.map(row => row.map(cell => ({ ...cell })));
-  }  
+  }
+
+  // Returns the palette-mapped glyph at a local (x, y) offset within a named sprite.
+  // Returns null if the sprite doesn't exist or the cell is transparent.
+  getGlyph(spriteName: string, localX: number, localY: number, palette: number): AsciiGlyph | null {
+    const spriteEntry = this.sprites[spriteName];
+    if (!spriteEntry) return null;
+
+    const [offsetX, offsetY] = this.meta.offset;
+    const [strideX, strideY] = this.meta.stride;
+    const [cellX, cellY] = spriteEntry.offset;
+
+    const srcX = offsetX + cellX * strideX + localX;
+    const srcY = offsetY + cellY * strideY + localY;
+
+    const cell = this.layer[srcY]?.[srcX];
+    if (!cell || isTransparent(cell)) return null;
+
+    if (!this.palettes[palette]) palette = 0;
+
+    return {
+      bg: this.palettes[palette][cell.bg] ?? cell.bg,
+      fg: this.palettes[palette][cell.fg] ?? cell.fg,
+      char: cell.char,
+    };
+  }
 
   draw(target: AsciiGlyph[][], spriteName: string, targetX: number, targetY: number, palette: number, onClick?: () => void): void {
     const spriteRequested = this.sprites[spriteName];

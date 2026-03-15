@@ -1,5 +1,5 @@
 
-import { AsciiGlyph } from "../types/AsciiGlyph";
+import { AsciiGlyph, isTransparent } from "../types/AsciiGlyph";
 
 function intToCssColor(color: number): string {
   return "#" + color.toString(16).padStart(6, "0");
@@ -15,8 +15,8 @@ export function blockToText(block: AsciiGlyph[][]): JSX.Element {
               key={x}
               onClick={() => glyph.onClick?.(x, y)}
               style={{
-                color: intToCssColor(glyph.fg),
-                backgroundColor: intToCssColor(glyph.bg),
+                color: isTransparent(glyph) ? "transparent" : intToCssColor(glyph.fg),
+                backgroundColor: (glyph.bg & 0xffffff) === 0xff00ff ? "transparent" : intToCssColor(glyph.bg),
                 cursor: glyph.onClick ? "pointer" : "default",
               }}
             >

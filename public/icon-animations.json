@@ -1,0 +1,9 @@
+{
+    "RISE": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "frames": "RISE",
+            "palettes": [0,0,0,1]
+        }
+    }
+}

@@ -8,6 +8,7 @@ export interface Keyframe {
   t1: number;
   room0: number;
   data: number[];
+  predicted?: boolean;
 }
 
 interface KeyframeDigest {
@@ -47,27 +48,27 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       switch(k.animation) {
         case "WALKING_FROM_WALL_TO_WALL": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
-          toFloorGlyphsFromDoor(room, k.data[2]),
+          toFloorGlyphsFromDoor(room, k.data[1]),
           lerp];
         case "WALKING_FROM_WALL_TO_FLOOR": return [
           toFloorGlyphsFromDoor(room, k.data[0]),
-          toFloorGlyphsFromCell(room, k.data[2]),
+          toFloorGlyphsFromCell(room, k.data[1]),
           lerp];
         case "WALKING_FROM_FLOOR_TO_WALL": return [
           toFloorGlyphsFromCell(room, k.data[0]),
-          toFloorGlyphsFromDoor(room, k.data[2]),
+          toFloorGlyphsFromDoor(room, k.data[1]),
           lerp];
         case "WALKING_FROM_FLOOR_TO_FLOOR": return [
           toFloorGlyphsFromCell(room, k.data[0]),
-          toFloorGlyphsFromCell(room, k.data[2]),
+          toFloorGlyphsFromCell(room, k.data[1]),
           lerp];
         case "STANDING_AT_DOOR": return [
-          toFloorGlyphsFromDoor(room, k.data[2]),
-          toFloorGlyphsFromDoor(room, k.data[2]),
+          toFloorGlyphsFromDoor(room, k.data[1]),
+          toFloorGlyphsFromDoor(room, k.data[1]),
           skip];
         case "STANDING_AT_FLOOR": return [
-          toFloorGlyphsFromCell(room, k.data[2]),
-          toFloorGlyphsFromCell(room, k.data[2]),
+          toFloorGlyphsFromCell(room, k.data[1]),
+          toFloorGlyphsFromCell(room, k.data[1]),
           skip];
       }
       return null;
@@ -94,7 +95,7 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
 }
 
 export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: Keyframe): boolean {
-  return target.animation == source.animation && target.data[2] == source.data[2];
+  return target.animation == source.animation && target.data[1] == source.data[1];
   // |--------------|source.t1|timeout|source.t1+timeout|----------------
   // |--------------------------------------------------------||--------- <- safe
   // |---------------------------------------------|target.t0|--------- <- duplicate
@@ -117,13 +118,13 @@ export function predictedActionsRemaining(base: number, pending: Keyframe[]): nu
 export function createMoveDecrementPrediction(baseMoves: number, pending: Keyframe[], times: TimeRef): Keyframe {
   const from = predictedMovesRemaining(baseMoves, pending);
   const t = performance.now() - times.serverToClientOffset;
-  return { animation: 'MOVE_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, 0, Math.max(0, from - 1), 0] };
+  return { animation: 'MOVE_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, Math.max(0, from - 1)], predicted: true };
 }
 
 export function createActionDecrementPrediction(baseActions: number, pending: Keyframe[], times: TimeRef): Keyframe {
   const from = predictedActionsRemaining(baseActions, pending);
   const t = performance.now() - times.serverToClientOffset;
-  return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, 0, Math.max(0, from - 1), 0] };
+  return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, Math.max(0, from - 1)], predicted: true };
 }
 
 export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef, startTime?: number): Keyframe[] {
@@ -208,7 +209,8 @@ export function createMovePrediction(roomId: number, floorId: number | undefined
       t0: animationTime,
       t1: animationTime + MOVE_DURATION,
       room0: roomId,
-      data: [source, 0, destination, 0],
+      data: [source, destination],
+      predicted: true,
     };
     var animationStanding: string | undefined = isFloorPrediction ? "STANDING_AT_FLOOR" : isDoorPrediction ? "STANDING_AT_DOOR" : undefined;
     if (animationStanding === undefined) {
@@ -220,7 +222,8 @@ export function createMovePrediction(roomId: number, floorId: number | undefined
       t0: animationTime + MOVE_DURATION,
       t1: animationTime + MOVE_DURATION + STAND_DURATION,
       room0: roomId,
-      data: [destination, 0, destination, 0],
+      data: [destination, destination],
+      predicted: true,
     };
     console.log(stand);
     return isFloorPrediction ? [move, stand] : [move];

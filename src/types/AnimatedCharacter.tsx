@@ -1,56 +1,135 @@
 import { blockToText } from "../functions/blockToText";
-import { digestKeyframes, Keyframe, KeyframeDigest } from "./Keyframe";
+import { AsciiGlyph } from "./AsciiGlyph";
+import { digestKeyframes, isKeyframeAnimating, Keyframe } from "./Keyframe";
 import { DrawerProps } from "../types/DrawerProps";
-import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor } from "../types/RoomProps";
+import { RoomProps } from "../types/RoomProps";
+import { Painter, AnimationFlyweight } from "../assets/Painter";
 
 export interface AnimatedCharacterProps {
-    character: any;
+    /** The keyframes to animate — caller selects the correct list (e.g. wall.keyframes vs wall.lockKeyframes). */
+    keyframes: Keyframe[];
+    painter: Painter;
+    /** The entity's current (post-logic) name. Only used for the static fallback when no spritesheet
+     *  animation is active. Never used to determine transition state. */
+    name: string;
+    animationFlyweights: Record<string, AnimationFlyweight>;
     animationTime: number;
+    /** For short non-predicted animations: a local clock time to use for sprite
+     *  selection and frame progress instead of the server-synced animationTime. */
+    localAnimationTime?: number;
+    /** For non-movement entities (locks, items, etc.): the grid [col, row] to render at.
+     *  When omitted, position is derived from digestKeyframes (used for moving characters). */
+    position?: [number, number];
+    /** Used for resolving transition before/after sprite indices when they belong to a
+     *  different painter than the main one (e.g. lock animations reference door indices). */
+    transitionPainter?: Painter;
     globals: DrawerProps;
     room: RoomProps;
 }
 
 export function AnimatedCharacter({
-  character,
+  keyframes,
+  painter,
+  name,
+  animationFlyweights,
   animationTime,
+  localAnimationTime,
+  position,
+  transitionPainter,
   globals,
   room,
-  drawSprite,
-}: {
-  character: any;
-  animationTime: number;
-  globals: DrawerProps;
-  room: RoomProps;
-  drawSprite?: (globals: DrawerProps) => void;
-}) {
-  const keyframe = digestKeyframes(character.keyframes, animationTime, room);
+}: AnimatedCharacterProps) {
+  // Use localAnimationTime for sprite selection/progress when provided (short non-predicted anims).
+  // Movement/position always uses the server-synced animationTime.
+  const spriteTime = localAnimationTime ?? animationTime;
+  // Translation: where to render the character.
+  // Static entities (locks, items, etc.) supply their own position; moving characters
+  // derive it from digestKeyframes.
+  const keyframe = digestKeyframes(keyframes, animationTime, room);
+  const translationProgress = keyframe.t1 > keyframe.t0
+    ? (animationTime - keyframe.t0) / (keyframe.t1 - keyframe.t0)
+    : 0;
+  const kx = Math.floor(keyframe.curve(keyframe.source[0], keyframe.destination[0], translationProgress));
+  const ky = Math.floor(keyframe.curve(keyframe.source[1], keyframe.destination[1], translationProgress));
+  const x = position?.[0] ?? kx;
+  const y = position?.[1] ?? ky;
 
-  const progress =
-    (animationTime - keyframe.t0) / (keyframe.t1 - keyframe.t0);
+  // Glyphing: find the active keyframe whose animation exists in the spritesheet.
+  const sheet = globals.textures.animationSheet;
+  const activeKeyframe = keyframes.find(k =>
+    k.room0 === room.index &&
+    isKeyframeAnimating(k, spriteTime) &&
+    !!sheet?.meta.spritesheet[k.animation]
+  );
+  const flyweight = activeKeyframe ? (animationFlyweights[activeKeyframe.animation] ?? null) : null;
 
-  // interpolate room-space position
-  const [x0, y0] = keyframe.source;
-  const [x1, y1] = keyframe.destination;
-  const x = Math.floor(keyframe.curve(x0, x1, progress));
-  const y = Math.floor(keyframe.curve(y0, y1, progress));
-
-  if (drawSprite) {
-    drawSprite(globals);
-  } else {
-    globals.painters.roles.draw(character.role, {globals, locals: {coords: [0, 0]}});
+  // No active spritesheet animation: fall back to static painter render.
+  // Only skip if the entity is Unrendered — `name` is safe to use here since no transition is active.
+  if (!activeKeyframe) {
+    if (painter.renderers[name]?.type === "Unrendered") {
+      return null;
+    }
+    painter.draw(name, { globals, locals: { coords: [0, 0], direction: 0 } });
+    return (
+      <div className="animated-character" style={{ position: "absolute", left: `${x}ch`, top: `${y}em`, pointerEvents: "none" }}>
+        {blockToText(globals.glyphs)}
+      </div>
+    );
   }
 
+  const [fw, fh] = sheet!.meta.size;
+  const [dox, doy] = sheet!.meta["draw-offset"];
+  const TRANSPARENT: AsciiGlyph = { char: " ", fg: 0xff00ff, bg: 0xff00ff };
+  const frameGlyphs: AsciiGlyph[][] = Array.from({ length: fh }, () =>
+    Array.from({ length: fw }, () => ({ ...TRANSPARENT }))
+  );
+
+  const animName = activeKeyframe.animation;
+  const animDef = sheet!.meta.spritesheet[animName];
+  const frameCount = animDef?.length ?? 1;
+  const glyphProgress = activeKeyframe.t1 > activeKeyframe.t0
+    ? Math.max(0, Math.min(1, (spriteTime - activeKeyframe.t0) / (activeKeyframe.t1 - activeKeyframe.t0)))
+    : 0;
+  const frameIndex = Math.min(Math.floor(glyphProgress * frameCount), frameCount - 1);
+
+  let beforeGlyphs: AsciiGlyph[][] | null = null;
+  let afterGlyphs: AsciiGlyph[][] | null = null;
+
+  if (flyweight?.isTransition) {
+    // const tp = transitionPainter ?? painter;
+    const tp = painter;
+    const beforeName = tp.indexMap[activeKeyframe.data[0]];
+    const afterName = tp.indexMap[activeKeyframe.data[1]];
+    // Only drop if the indexMap is populated — an empty indexMap means flyweights haven't
+    // been applied yet (React effect timing), not that the sprites are absent.
+    if (Object.keys(tp.indexMap).length > 0) {
+      const beforeRenderer = beforeName ? tp.getRenderer(beforeName) : null;
+      const afterRenderer = afterName ? tp.getRenderer(afterName) : null;
+      if ((!beforeRenderer || beforeRenderer.type === "Unrendered") &&
+          (!afterRenderer || afterRenderer.type === "Unrendered")) {
+        return null;
+      }
+    }
+    const [sw, sh] = globals.textures.icons.meta.size;
+    const makeBuffer = (): AsciiGlyph[][] =>
+      Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
+    if (beforeName) {
+      beforeGlyphs = makeBuffer();
+      tp.draw(beforeName, { globals: { ...globals, glyphs: beforeGlyphs }, locals: { coords: [0, 0], direction: 0 } });
+    }
+    if (afterName) {
+      afterGlyphs = makeBuffer();
+      tp.draw(afterName, { globals: { ...globals, glyphs: afterGlyphs }, locals: { coords: [0, 0], direction: 0 } });
+    }
+  }
+
+  const paletteKeys = animDef?.palette ?? [0];
+  const animPalette = paletteKeys[Math.min(Math.floor(glyphProgress * paletteKeys.length), paletteKeys.length - 1)];
+
+  sheet!.drawFrame(frameGlyphs, animName, frameIndex, beforeGlyphs, afterGlyphs, dox, doy, animPalette);
   return (
-    <div
-      className="animated-character"
-      style={{
-        position: "absolute",
-        left: `${x}ch`,
-        top: `${y}em`,
-        pointerEvents: "none",
-      }}
-    >
-      {blockToText(globals.glyphs)}
+    <div className="animated-character" style={{ position: "absolute", left: `${x - dox}ch`, top: `${y - doy}em`, pointerEvents: "none" }}>
+      {blockToText(frameGlyphs)}
     </div>
   );
 }

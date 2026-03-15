@@ -65,7 +65,7 @@ export function swapRedBlue(color: number): number {
 }
 
 export function isTransparent(glyph: AsciiGlyph): boolean {
-  return (getColor(glyph) & 0xffffff) == 0xff00ff;
+  return (getColor(glyph) & 0xffffff) == 0xff00ff || (getColor(glyph) & 0xffffff) == 0xff00fe;
 }
 
 export async function loadXp(buffer: ArrayBuffer): Promise<AsciiGlyph[][][]> {
