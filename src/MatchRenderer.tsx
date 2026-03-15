@@ -843,8 +843,26 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const key = `${k.animation}_${k.t0}`;
     if (!shortAnimClocksRef.current.has(key)) {
       shortAnimClocksRef.current.set(key, performance.now());
+      playAnimationSound(k.animation);
     }
     return k.t0 + (performance.now() - shortAnimClocksRef.current.get(key)!);
+  }
+
+  function playAnimationSound(animation: string): void {
+    const synth = getSynth();
+    switch (animation) {
+      case "CRUSH":   synth.crush();   break;
+      case "SLIDE":   synth.pop();     break;
+      case "POOF":    synth.poof();    break;
+      case "PICKUP":  synth.pickup();  break;
+      case "UNLOCK":  synth.unlock();  break;
+      case "ERROR":   synth.error();   break;
+      case "DAMAGE":  synth.damage();  break;
+      case "FALL":    synth.fall();    break;
+      case "RISE":    synth.rise();    break;
+      case "SPARK":   synth.spark();   break;
+      case "POP":     synth.pop();     break;
+    }
   }
 
   function isLocallyAnimating(k: Keyframe): boolean {
