@@ -20,6 +20,10 @@ export interface AnimatedCharacterProps {
     /** For non-movement entities (locks, items, etc.): the grid [col, row] to render at.
      *  When omitted, position is derived from digestKeyframes (used for moving characters). */
     position?: [number, number];
+    /** Fallback position for characters whose only active keyframe is a non-movement animation
+     *  (e.g. a transition animation with no concurrent standing/walking keyframe).
+     *  Passed to digestKeyframes as the default when no keyframe provides a position. */
+    fallbackPosition?: [number, number];
     /** Used for resolving transition before/after sprite indices when they belong to a
      *  different painter than the main one (e.g. lock animations reference door indices). */
     transitionPainter?: Painter;
@@ -35,6 +39,7 @@ export function AnimatedCharacter({
   animationTime,
   localAnimationTime,
   position,
+  fallbackPosition,
   transitionPainter,
   globals,
   room,
@@ -45,7 +50,7 @@ export function AnimatedCharacter({
   // Translation: where to render the character.
   // Static entities (locks, items, etc.) supply their own position; moving characters
   // derive it from digestKeyframes.
-  const keyframe = digestKeyframes(keyframes, animationTime, room);
+  const keyframe = digestKeyframes(keyframes, animationTime, room, fallbackPosition);
   const translationProgress = keyframe.t1 > keyframe.t0
     ? (animationTime - keyframe.t0) / (keyframe.t1 - keyframe.t0)
     : 0;

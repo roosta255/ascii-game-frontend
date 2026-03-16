@@ -261,7 +261,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // console.log("🧭 Rendering room ID:", viewedRoomId, room);
   const effectiveCharacters = getAllCharacters(match).map(c => applyClientKeyframesToCharacter(c));
   const offsetMap = Object.fromEntries(effectiveCharacters.map((c: any) => [c.offset, c]));
-
   const chestOffsetMap: Record<number, number> = {};
   (match.dungeon.chests ?? []).forEach((chest: any, index: number) => {
     if (chest.containerCharacterId != null) chestOffsetMap[chest.containerCharacterId] = index;
@@ -488,7 +487,23 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       if (!character) return;
       // animations check
 
-      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) return;
+      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) {
+        animatedExtras.push(
+          <AnimatedCharacter
+            key={`character-${character.offset}`}
+            keyframes={character.keyframes}
+            painter={rolePainter!}
+            name={character.role}
+            animationFlyweights={animationFlyweights}
+            animationTime={animationTime}
+            localAnimationTime={entityLocalAnimTime(character.keyframes)}
+            globals={rebuildGlyphs(globals, 5, 4)}
+            room={roomProps}
+            fallbackPosition={[drawX, drawY]}
+          />
+        );
+        return;
+      }
       const chestIndex = chestOffsetMap[character.offset];
       if (chestIndex != null) {
         globals.painters.roles.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick: () => { setSelectedChestId(chestIndex); setRightPanelMode('chest'); }}});
@@ -1070,23 +1085,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     drawCharacterSheetAt([0, 41]);
   }
 
-  for (const character of effectiveCharacters) {
-    if (character.keyframes.some((k: Keyframe) => isLocallyAnimating(k))) {
-      animatedExtras.push(
-        <AnimatedCharacter
-          key={`character-${character.offset}`}
-          keyframes={character.keyframes}
-          painter={rolePainter!}
-          name={character.role}
-          animationFlyweights={animationFlyweights}
-          animationTime={animationTime}
-          localAnimationTime={entityLocalAnimTime(character.keyframes)}
-          globals={rebuildGlyphs(globals, 5, 4)}
-          room={roomProps}
-        />
-      );
-    }
-  }
 
   // Capture the natural canvas width once (at base font-size, before any scaling).
   // CSS font-size changes alter scrollWidth so we store the baseline to avoid feedback loops.

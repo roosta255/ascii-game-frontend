@@ -102,4 +102,16 @@ export class ChipSynth {
     pop() {
         this.square(700, 0.3, 5, 0);
     }
+    togglerSwitch() {
+        // FLASH STRIKE
+        this.square(1800, 0.35, 20, 0);
+        // CRYSTAL WAVE
+        this.square(700, 0.25, 10, 0.07);
+
+        // RESONANT RING
+        this.square(900, 0.18, 8, 0.16);
+
+        // DUST SETTLE
+        this.noise(0.12, 4, 0.30);
+    }
 }

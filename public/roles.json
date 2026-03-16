@@ -2,7 +2,27 @@
     "TOGGLER": {
         "renderer": {
             "type": "CharacterRenderer",
+            "palette": 0,
+            "eyes": 3,
+            "sprite": "TOGGLER",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "TOGGLER_BLUE": {
+        "renderer": {
+            "type": "CharacterRenderer",
             "palette": 3,
+            "eyes": 3,
+            "sprite": "TOGGLER",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "TOGGLER_ORANGE": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 12,
             "eyes": 3,
             "sprite": "TOGGLER",
             "bleedable": false,

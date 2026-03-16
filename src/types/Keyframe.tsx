@@ -23,21 +23,19 @@ export function isKeyframeAnimating(keyframe: Keyframe, animationTime: number): 
   return keyframe.animation !== "NIL" && keyframe.t1 >= animationTime;
 }
 
-export function digestKeyframes(keyframes: Keyframe[], animationTime: number, room: RoomProps): KeyframeDigest {
+export function digestKeyframes(keyframes: Keyframe[], animationTime: number, room: RoomProps, defaultPosition?: [number, number]): KeyframeDigest {
   // animations are a list of keyframes, but if overlapping, then some blending is required
   // say a character has 2 animations, where are they rendered in between?
   // * all animations should determine whether animationTime is within them.
   // what if those animations are overlapping? where then are they rendered?
-  var digest: KeyframeDigest = {
-    source: [0, 0],
-    destination: [0, 0],
-    t0: 0,
-    t1: 1,
-    curve: skip,
-  };
+  var digest: KeyframeDigest | null = null;
+  // Fallback: destination of the most recently expired movement keyframe.
+  // Used when only a non-movement keyframe (e.g. a transition animation) is active.
+  var lastExpiredPosition: [number, number] | null = null;
+  var lastExpiredT1 = -Infinity;
 
   // find current animation
-  // else, 
+  // else,
 
   for (var k of keyframes) {
     // skip animations in rooms not rendering:
@@ -82,16 +80,22 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
 
     if (animationTime >= k.t0 && animationTime < k.t1) {
       // currently animating this movement
-      digest.source = xy0;
-      digest.destination = xy1;
-      digest.t0 = k.t0;
-      digest.t1 = k.t1;
-      digest.curve = curve;
+      digest = { source: xy0, destination: xy1, t0: k.t0, t1: k.t1, curve };
+    } else if (animationTime >= k.t1 && k.t1 > lastExpiredT1) {
+      // track the most recently expired movement so non-movement animations
+      // (e.g. transition animations) can still render at the correct position
+      lastExpiredPosition = xy1;
+      lastExpiredT1 = k.t1;
     }
 
   }
 
-  return digest;
+  if (digest) return digest;
+
+  // No active movement keyframe — use the last known position if available
+  // (covers the case where only a transition animation keyframe is active)
+  const fallback = lastExpiredPosition ?? defaultPosition ?? [0, 0];
+  return { source: fallback, destination: fallback, t0: 0, t1: 1, curve: skip };
 }
 
 export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: Keyframe): boolean {

@@ -10,6 +10,8 @@
         "CRUSH": {"start": [0,0], "length": 6, "palette": [1]},
         "SLIDE": {"start": [0,1], "length": 6, "palette": [1]},
         "RISE": {"start": [0,2], "length": 8, "palette": [1]},
+        "TOGGLER_SWITCH_BLUE": {"start": [0, 4], "length": 9, "palette": [3]},
+        "TOGGLER_SWITCH_ORANGE": {"start": [0, 4], "length": 9, "palette": [12]},
         "FALL": {"start": [0,3], "length": 6, "palette": [1]}
     }
 }
