@@ -73,9 +73,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // Synchronous refs for movement prediction chaining between rapid clicks.
   const predictedMovesRef = useRef<Keyframe[]>([]);
   const predictedLocationRef = useRef<{ type: string; data: number; t1: number } | null>(null);
-  // Tracks the local performance.now() timestamp when a short non-predicted keyframe was first seen.
-  // Key: `${animation}_${t0}`. Used to play short animations to completion regardless of server clock lag.
+  // Tracks the local performance.now() timestamp when a non-predicted keyframe was first seen.
+  // Key: `${animation}_${t0}`. Used to play animations from the beginning when first detected on the client.
   const shortAnimClocksRef = useRef<Map<string, number>>(new Map());
+  // Records the client timestamp when the viewed room last changed. Animations whose server
+  // start time maps to before this value are treated as pre-existing and not replayed.
+  const roomEntryTimeRef = useRef<number>(performance.now());
+
+  useEffect(() => {
+    roomEntryTimeRef.current = performance.now();
+    shortAnimClocksRef.current.clear();
+  }, [viewedRoomId]);
 
   useEffect(() => {
     document.fonts.load("16px 'RexPaintFont'").then(() => {
@@ -851,10 +859,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const animatedExtras: ReactElement[] = [];
 
   // Returns the effective animation time for a keyframe.
-  // Short (<500ms) non-predicted keyframes get their own local clock so they
-  // always play to completion even when server latency cuts their visible window.
+  // Non-predicted keyframes that started after the client entered the current room
+  // get their own local clock so they always play from the beginning.
+  // Pre-existing animations (started before room entry) use global time and will
+  // appear finished if their window has already passed, preventing stale replay.
   function getLocalAnimTime(k: Keyframe): number {
-    if (k.predicted || (k.t1 - k.t0) >= 500) return animationTime;
+    if (k.predicted) return animationTime;
+    const clientAnimStart = k.t0 + times.serverToClientOffset;
+    if (clientAnimStart < roomEntryTimeRef.current) return animationTime;
     const key = `${k.animation}_${k.t0}`;
     if (!shortAnimClocksRef.current.has(key)) {
       shortAnimClocksRef.current.set(key, performance.now());
@@ -888,11 +900,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return isKeyframeAnimating(k, getLocalAnimTime(k));
   }
 
-  // Returns the local clock time for the first qualifying short keyframe on an entity,
-  // or undefined if none qualify (caller falls back to global animationTime).
+  // Returns the local clock time for the first non-predicted keyframe on an entity that
+  // started after room entry, or undefined if none qualify (caller falls back to global animationTime).
   function entityLocalAnimTime(keyframes: Keyframe[]): number | undefined {
     for (const k of keyframes) {
-      if (!k.predicted && (k.t1 - k.t0) < 500) {
+      if (!k.predicted) {
         const local = getLocalAnimTime(k);
         if (isKeyframeAnimating(k, local)) return local;
       }
