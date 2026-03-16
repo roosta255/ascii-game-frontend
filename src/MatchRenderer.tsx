@@ -877,6 +877,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       case "RISE":    synth.rise();    break;
       case "SPARK":   synth.spark();   break;
       case "POP":     synth.pop();     break;
+      case "TOGGLER_SWITCH_BLUE":
+                      synth.togglerSwitch(); break;
+      case "TOGGLER_SWITCH_ORANGE":
+                      synth.togglerSwitch(); break;
     }
   }
 
