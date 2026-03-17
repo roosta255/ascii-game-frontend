@@ -39,6 +39,36 @@
             "sleepable": false
         }
     },
+    "SNAKE": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 3,
+            "eyes": 6,
+            "sprite": "SNAKE",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "RAT": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 3, 
+            "eyes": 14,
+            "sprite": "RAT",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "CAT": {
+        "renderer": { 
+            "type": "CharacterRenderer",
+            "palette": 3,
+            "eyes": 12,
+            "sprite": "CAT",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
     "CHEST": {
         "renderer": {
             "type": "CharacterRenderer",
