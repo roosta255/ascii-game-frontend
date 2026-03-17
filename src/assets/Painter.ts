@@ -10,6 +10,7 @@ export interface FlyweightEntry {
 export interface AnimationFlyweight {
     name: string;
     isTransition: boolean;
+    isGlyphing: boolean;
 }
 
 // Textures map names -> Sprites

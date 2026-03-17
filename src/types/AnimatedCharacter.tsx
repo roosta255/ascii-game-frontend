@@ -71,6 +71,7 @@ export function AnimatedCharacter({
   // No active spritesheet animation: fall back to static painter render.
   // Only skip if the entity is Unrendered — `name` is safe to use here since no transition is active.
   if (!activeKeyframe) {
+    console.log(`role: ${name}, no active keyframe`);
     if (painter.renderers[name]?.type === "Unrendered") {
       return null;
     }
@@ -90,6 +91,7 @@ export function AnimatedCharacter({
   );
 
   const animName = activeKeyframe.animation;
+  console.log(`role: ${name}, animation: ${animName}`);
   const animDef = sheet!.meta.spritesheet[animName];
   const frameCount = animDef?.length ?? 1;
   const glyphProgress = activeKeyframe.t1 > activeKeyframe.t0
@@ -126,6 +128,14 @@ export function AnimatedCharacter({
       afterGlyphs = makeBuffer();
       tp.draw(afterName, { globals: { ...globals, glyphs: afterGlyphs }, locals: { coords: [0, 0], direction: 0 } });
     }
+  } else if (flyweight?.isGlyphing) {
+    const [sw, sh] = globals.textures.icons.meta.size;
+    const makeBuffer = (): AsciiGlyph[][] =>
+      Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
+    const buf = makeBuffer();
+    painter.draw(name, { globals: { ...globals, glyphs: buf }, locals: { coords: [0, 0], direction: 0 } });
+    beforeGlyphs = buf;
+    afterGlyphs = buf;
   }
 
   const paletteKeys = animDef?.palette ?? [0];

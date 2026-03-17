@@ -127,7 +127,32 @@ export function drawChestAt(
         const allChars = [...(match.dungeon?.characters ?? []), ...(match.builders?.map((b: any) => b.character) ?? [])];
         const critter = allChars.find((c: any) => c.characterId === critterId);
         if (critter) {
-          globals.painters.roles.draw(critter.role, { globals, locals: { coords: itemDraw } });
+          const onCritterClick = async () => {
+            try {
+              getSynth().playSquare(220);
+              const builderCharacter = match.builders[BUILDER_ID].character;
+              const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+              predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+              const body = { action: 'CRITTER_BITE', account, room: viewedRoomId, character: critterId, target: builderOffset, isForcedTurnEnd };
+              const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              });
+              if (!response.ok) {
+                console.error('Failed to perform CRITTER_BITE:', await response.text());
+                predictedStatsRef.current = [];
+              } else {
+                console.log('✅ CRITTER_BITE performed');
+                await refreshMatch();
+                predictedStatsRef.current = [];
+              }
+            } catch (error) {
+              console.error('Error performing CRITTER_BITE:', error);
+              predictedStatsRef.current = [];
+            }
+          };
+          globals.painters.roles.draw(critter.role, { globals, locals: { coords: itemDraw, onClick: onCritterClick } });
         }
       } else {
         globals.painters.items.draw(item.type, { globals, locals: { coords: itemDraw, onClick } });
