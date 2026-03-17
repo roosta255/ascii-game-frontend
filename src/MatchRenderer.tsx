@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, ReactElement } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getSynth } from "./audio/index";
 import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
@@ -13,6 +13,7 @@ import { CellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
 import { useIsMobile } from "./hooks/useIsMobile";
+import { drawChestAt } from "./drawers/drawChest";
 import "./MatchRenderer.css";
 
 const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
@@ -249,6 +250,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       doorways: doorwayPainter,
     },
     glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
+    animatedExtras: [],
   };
 
   
@@ -496,7 +498,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       // animations check
 
       if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) {
-        animatedExtras.push(
+        globals.animatedExtras.push(
           <AnimatedCharacter
             key={`character-${character.offset}`}
             keyframes={character.keyframes}
@@ -772,7 +774,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           console.log(wall.keyframes);
         }
         if (wall.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
-          animatedExtras.push(
+          globals.animatedExtras.push(
             <AnimatedCharacter
               key={`wall-${i}-door`}
               keyframes={wall.keyframes}
@@ -829,7 +831,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         let [dx, dy] = toFloorGlyphsFromLock(roomProps, i);
 
         if (wall.lockKeyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
-          animatedExtras.push(
+          globals.animatedExtras.push(
             <AnimatedCharacter
               key={`wall-${i}-lock`}
               keyframes={wall.lockKeyframes}
@@ -856,7 +858,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
   const animationTime = performance.now() - times.serverToClientOffset;
-  const animatedExtras: ReactElement[] = [];
 
   // Returns the effective animation time for a keyframe.
   // Non-predicted keyframes that started after the client entered the current room
@@ -915,7 +916,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   drawRoomAt(0, 0, room, viewedRoomId);
 
   function drawInventoryAt(offset: [number, number]) {
-    if (player.inventory.isEmpty) {
+    if (player.inventory.isEmpty || !player.inventory.items.some((item: any) => item.type !== 'NIL')) {
       return;
     }
     globals.textures.minimap.draw(globals.glyphs, "INVENTORY", offset[0], offset[1], 0);
@@ -958,7 +959,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const itemCell: [number, number] = [item.index % INVENTORY_WIDTH, Math.floor(item.index / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
       if (item.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
-        animatedExtras.push(
+        globals.animatedExtras.push(
           <AnimatedCharacter
             key={`item-${item.index}`}
             keyframes={item.keyframes}
@@ -985,78 +986,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   }
 
-  function drawChestAt(offset: [number, number], chest: any) {
-    const spriteName = chest.isLocked ? 'CHEST_6_LOCKED' : 'CHEST_6_UNLOCKED';
-    globals.textures.minimap.draw(globals.glyphs, spriteName, offset[0], offset[1], 0);
-    const containerCharacterId = chest.containerCharacterId;
-    const CELL_SIZE_X = 5;
-    const CELL_SIZE_Y = 4;
-    if (chest.isLocked) {
-      const lockDrawX = offset[0] + 15;
-      const lockDrawY = offset[1] + 7;
-      if (chest.lock?.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
-        animatedExtras.push(
-          <AnimatedCharacter
-            key={`chest-lock-${containerCharacterId}`}
-            keyframes={chest.lock.keyframes}
-            painter={chestLockPainter!}
-            name={chest.lock.type}
-            animationFlyweights={animationFlyweights}
-            animationTime={animationTime}
-            localAnimationTime={entityLocalAnimTime(chest.lock.keyframes)}
-            position={[lockDrawX, lockDrawY]}
-            globals={rebuildGlyphs(globals, 5, 4)}
-            room={roomProps}
-          />
-        );
-      } else {
-        globals.painters.chestLocks.draw(chest.lock, {globals, locals: {coords: [lockDrawX, lockDrawY], direction: 0}});
-      }
-      markRegionClickable(lockDrawX, lockDrawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
-        try {
-          getSynth().playSquare(220);
-          const builderCharacter = match.builders[BUILDER_ID].character;
-          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
-          predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
-          const body = {action: 'USE_CHEST_LOCK', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, isForcedTurnEnd};
-          const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
-          });
-          if (!response.ok) { console.error('Failed to use chest lock:', await response.text()); predictedStatsRef.current = []; }
-          else { console.log('✅ Chest lock activated'); await refreshMatch(); predictedStatsRef.current = []; }
-        } catch (error) { console.error('Error using chest lock:', error); predictedStatsRef.current = []; }
-      });
-    } else {
-      const CHEST_ITEMS_WIDE = 3;
-      const itemGrid: GridCalculator = {position: offset, offset: [3, 3], stride: [6, 6]};
-      for (const item of (chest.inventory?.items ?? [])) {
-        if (item.type === 'NIL') continue;
-        const itemCell: [number, number] = [item.index % CHEST_ITEMS_WIDE, Math.floor(item.index / CHEST_ITEMS_WIDE)];
-        const itemDraw: [number, number] = calculatePosition(itemGrid, itemCell);
-        const capturedIndex = item.index;
-        const onClick = async () => {
-          try {
-            getSynth().playSquare(220);
-            const builderCharacter = match.builders[BUILDER_ID].character;
-            const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
-            predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
-            const body = {action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, item: capturedIndex, isForcedTurnEnd};
-            const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
-              method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
-            });
-            if (!response.ok) { console.error('Failed to loot chest:', await response.text()); predictedStatsRef.current = []; }
-            else { console.log('✅ Chest item looted'); await refreshMatch(); predictedStatsRef.current = []; }
-          } catch (error) { console.error('Error looting chest:', error); predictedStatsRef.current = []; }
-        };
-        globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
-        if (item.stacks > 1) {
-          const sx = itemDraw[0] + 3;
-          const sy = itemDraw[1] + 5;
-          if (globals.glyphs[sy]?.[sx]) globals.glyphs[sy][sx] = {char: String(item.stacks), fg: 0xffffff, bg: 0x000000};
-        }
-      }
-    }
-  }
+  const chestProps = { globals, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime };
 
   if (!isMobile) {
     // Panel toggle tabs
@@ -1086,7 +1016,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const chest = selectedChestId != null ? (match.dungeon.chests ?? [])[selectedChestId] : null;
     if (rightPanelMode === 'chest' && chest) {
       drawInventoryAt([41, 13]);
-      drawChestAt([76, 13], chest);
+      drawChestAt([76, 13], { ...chestProps, chest });
     } else if (rightPanelMode === 'inventory') {
       drawInventoryAt([41, 13]);
     } else {
@@ -1094,7 +1024,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   } else if (isMobile && selectedChestId != null && (match.dungeon.chests ?? [])[selectedChestId]) {
     drawInventoryAt([0, 41]);
-    drawChestAt([0, 66], (match.dungeon.chests ?? [])[selectedChestId]);
+    const mobileChestY = (player.inventory.isEmpty || !player.inventory.items.some((item: any) => item.type !== 'NIL')) ? 41 : 66;
+    drawChestAt([0, mobileChestY], { ...chestProps, chest: (match.dungeon.chests ?? [])[selectedChestId] });
   } else if (showInventory) {
     drawInventoryAt([0, 41]);
   } else if (showCharacter) {
@@ -1119,7 +1050,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       <div ref={sceneRef} className="scene" style={{ fontSize: `${targetFontSize}px` }}>
         <pre>{blockToText(globals.glyphs)}</pre>
         <div className="overlay">
-          {animatedExtras}
+          {globals.animatedExtras}
         </div>
       </div>
     </div>

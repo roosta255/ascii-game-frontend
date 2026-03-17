@@ -1,4 +1,7 @@
-import { DrawerProps } from '../types/DrawerProps';
+import { DrawerProps, rebuildGlyphs } from '../types/DrawerProps';
+import { AnimatedCharacter } from '../types/AnimatedCharacter';
+import { AnimationFlyweight } from '../assets/Painter';
+import { RoomProps } from '../types/RoomProps';
 import { calculatePosition, GridCalculator } from '../types/GridCalculator';
 import { Keyframe, predictedActionsRemaining, createActionDecrementPrediction } from '../types/Keyframe';
 import { markRegionClickable } from './canvasUtils';
@@ -15,6 +18,11 @@ export interface DrawChestProps {
   predictedStatsRef: { current: Keyframe[] };
   times: { serverToClientOffset: number };
   refreshMatch: () => Promise<void>;
+  animationFlyweights: Record<string, AnimationFlyweight>;
+  animationTime: number;
+  roomProps: RoomProps;
+  isLocallyAnimating: (k: Keyframe) => boolean;
+  entityLocalAnimTime: (keyframes: Keyframe[]) => number | undefined;
 }
 
 const CHEST_ITEMS_WIDE = 3;
@@ -24,7 +32,7 @@ const CELL_SIZE_Y = 4;
 
 export function drawChestAt(
   offset: [number, number],
-  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch }: DrawChestProps,
+  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime }: DrawChestProps,
 ) {
   const spriteName = chest.isLocked ? 'CHEST_6_LOCKED' : 'CHEST_6_UNLOCKED';
   globals.textures.minimap.draw(globals.glyphs, spriteName, offset[0], offset[1], 0);
@@ -34,7 +42,24 @@ export function drawChestAt(
   if (chest.isLocked) {
     const lockDrawX = offset[0] + CHEST_LOCK_OFFSET[0];
     const lockDrawY = offset[1] + CHEST_LOCK_OFFSET[1];
-    globals.painters.chestLocks.draw(chest.lock, { globals, locals: { coords: [lockDrawX, lockDrawY], direction: 0 } });
+    if (chest.lock?.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
+      globals.animatedExtras.push(
+        <AnimatedCharacter
+          key={`chest-lock-${containerCharacterId}`}
+          keyframes={chest.lock.keyframes}
+          painter={globals.painters.chestLocks!}
+          name={chest.lock.type}
+          animationFlyweights={animationFlyweights}
+          animationTime={animationTime}
+          localAnimationTime={entityLocalAnimTime(chest.lock.keyframes)}
+          position={[lockDrawX, lockDrawY]}
+          globals={rebuildGlyphs(globals, CELL_SIZE_X, CELL_SIZE_Y)}
+          room={roomProps}
+        />
+      );
+    } else {
+      globals.painters.chestLocks.draw(chest.lock, { globals, locals: { coords: [lockDrawX, lockDrawY], direction: 0 } });
+    }
     markRegionClickable(globals.glyphs, lockDrawX, lockDrawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
       try {
         getSynth().playSquare(220);
@@ -63,7 +88,7 @@ export function drawChestAt(
   } else {
     const itemGrid: GridCalculator = {
       position: offset,
-      offset: [3, 3],
+      offset: [9, 3],
       stride: [6, 6],
     };
 
@@ -97,12 +122,21 @@ export function drawChestAt(
           predictedStatsRef.current = [];
         }
       };
-      globals.painters.items.draw(item.type, { globals, locals: { coords: itemDraw, onClick } });
-      if (item.stacks > 1) {
-        const sx = itemDraw[0] + 3;
-        const sy = itemDraw[1] + 5;
-        if (globals.glyphs[sy]?.[sx]) {
-          globals.glyphs[sy][sx] = { char: String(item.stacks), fg: 0xffffff, bg: 0x000000 };
+      if (item.type === 'CRITTER') {
+        const critterId = item.stacks;
+        const allChars = [...(match.dungeon?.characters ?? []), ...(match.builders?.map((b: any) => b.character) ?? [])];
+        const critter = allChars.find((c: any) => c.characterId === critterId);
+        if (critter) {
+          globals.painters.roles.draw(critter.role, { globals, locals: { coords: itemDraw } });
+        }
+      } else {
+        globals.painters.items.draw(item.type, { globals, locals: { coords: itemDraw, onClick } });
+        if (item.stacks > 1) {
+          const sx = itemDraw[0] + 3;
+          const sy = itemDraw[1] + 5;
+          if (globals.glyphs[sy]?.[sx]) {
+            globals.glyphs[sy][sx] = { char: String(item.stacks), fg: 0xffffff, bg: 0x000000 };
+          }
         }
       }
     }

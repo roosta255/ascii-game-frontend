@@ -1,3 +1,4 @@
+import { ReactElement } from "react";
 import { AsciiGlyph, createBlankCanvas } from "./AsciiGlyph";
 import { Painter } from "../assets/Painter";
 import { Texture } from "../assets/Texture";
@@ -24,12 +25,14 @@ export interface DrawerProps {
     glyphs: AsciiGlyph[][];
     textures: TextureProps;
     painters: PainterProps;
+    animatedExtras: ReactElement[];
 };
 
 export function rebuildGlyphs(source: DrawerProps, width: number, height: number): DrawerProps {
     return {
         textures: source.textures,
         painters: source.painters,
+        animatedExtras: source.animatedExtras,
         glyphs: createBlankCanvas(width, height),
     };
 }
