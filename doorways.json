@@ -1,4 +1,6 @@
 {
+    "ELEVATOR": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_2_x_2_DOORWAYS" } },
+    "RECT_2_x_2": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_2_x_2_DOORWAYS" } },
     "LIGHTNING_ROD": { "renderer": { "type": "DoorwayRenderer", "sprite": "RECT_4_x_1_DOORWAYS" } },
     "POWER_GENERATOR": {
         "renderer": {

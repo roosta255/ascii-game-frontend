@@ -1,4 +1,6 @@
 {
+    "ELEVATOR": { "renderer": { "type": "BackgroundRenderer", "sprite": "RECT_2_x_2_BACKGROUND", "palette": 16 } },
+    "RECT_2_x_2": { "renderer": { "type": "BackgroundRenderer", "sprite": "RECT_2_x_2_BACKGROUND", "palette": 16 } },
     "LIGHTNING_ROD": { "renderer": { "type": "BackgroundRenderer", "sprite": "LIGHTNING_ROD_BACKGROUND", "palette": 16 } },
     "POWER_GENERATOR": {
         "renderer": {

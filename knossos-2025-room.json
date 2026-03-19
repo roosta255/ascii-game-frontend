@@ -18,6 +18,8 @@
         "RECT_4_x_1_DOORWAYS": [3,1],
         "RECT_2_x_5_BACKGROUND": [2,2],
         "RECT_2_x_5_DOORWAYS": [3,2],
+        "RECT_2_x_2_BACKGROUND": [4,0],
+        "RECT_2_x_2_DOORWAYS": [5,0],
         "TIME_GATE": [4,1]
     },
     "spritesWithHorizontalFlip": {},

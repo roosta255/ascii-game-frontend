@@ -6,6 +6,13 @@
             "palette": 0
         }
     },
+    "KEY_ELEVATOR": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEY_ELEVATOR",
+            "palette": 0
+        }
+    },
     "CUBE_AWAKENED": {
         "renderer": {
             "type": "SpriteRenderer",

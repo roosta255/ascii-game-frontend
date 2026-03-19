@@ -1,4 +1,14 @@
 {
+    "ELEVATOR": {
+        "offset": [14, 17],
+        "stride": [6, 5],
+        "walls": [
+            { "door": { "offset": [17, 12] }, "lock": { "offset": [21,6] } },
+            { "door": { "offset": [26, 19] }, "lock": { "offset": [30,12] } },
+            { "door": { "offset": [17, 27] }, "lock": { "offset": [21,32] } },
+            { "door": { "offset": [8, 19] }, "lock": { "offset": [3,12] } }
+        ]
+    },
     "TIME_GATE_TO_FUTURE": {
         "offset": [8, 13],
         "stride": [6, 5],

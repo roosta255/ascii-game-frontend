@@ -1,4 +1,53 @@
 {
+    "ELEVATOR_CLOSED_KEYED": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYED_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYED_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYED_CALLING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_CALLING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_ELEVATOR_WEST", "palette": 3 }]}},
+
+    "ELEVATOR_OPEN_KEYED": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYED_PAYING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYED_MOVING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYED_CALLING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYLESS_PAYING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYLESS_MOVING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYLESS_CALLING_BUTTON": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_OPEN_KEYLESS": { "renderer": { "type": "Unrendered" } },
     "WALL": {
         "renderer": {
             "type": "Unrendered"
