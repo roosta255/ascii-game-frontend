@@ -84,6 +84,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   useEffect(() => {
     roomEntryTimeRef.current = performance.now();
     shortAnimClocksRef.current.clear();
+    setSelectedChestId(null);
   }, [viewedRoomId]);
 
   useEffect(() => {
