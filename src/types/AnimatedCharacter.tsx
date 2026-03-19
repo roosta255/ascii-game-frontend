@@ -71,7 +71,7 @@ export function AnimatedCharacter({
   // No active spritesheet animation: fall back to static painter render.
   // Only skip if the entity is Unrendered — `name` is safe to use here since no transition is active.
   if (!activeKeyframe) {
-    console.log(`role: ${name}, no active keyframe`);
+    // console.log(`role: ${name}, no active keyframe`);
     if (painter.renderers[name]?.type === "Unrendered") {
       return null;
     }
@@ -91,7 +91,7 @@ export function AnimatedCharacter({
   );
 
   const animName = activeKeyframe.animation;
-  console.log(`role: ${name}, animation: ${animName}`);
+  // console.log(`role: ${name}, animation: ${animName}`);
   const animDef = sheet!.meta.spritesheet[animName];
   const frameCount = animDef?.length ?? 1;
   const glyphProgress = activeKeyframe.t1 > activeKeyframe.t0

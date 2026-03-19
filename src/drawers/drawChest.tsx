@@ -103,7 +103,7 @@ export function drawChestAt(
           const builderCharacter = match.builders[BUILDER_ID].character;
           const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
-          const body = { action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, item: capturedIndex, isForcedTurnEnd };
+          const body = { action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, target_item: capturedIndex, target_inventory: chest.inventory?.inventoryId, isForcedTurnEnd };
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,62 @@
 {
+    "ELEVATOR_CLOSED_KEYED": { "renderer": { "type": "Unrendered" } },
+    "ELEVATOR_CLOSED_KEYED_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYED_SOUTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYED_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYED_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYED_SOUTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_CLOSED_KEYLESS_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYED_SOUTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_OPEN_KEYED_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_OPEN_KEYED_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYED_SOUTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_OPEN_KEYLESS_PAYING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_OPEN_KEYLESS_MOVING_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYED_SOUTH", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+
+    "ELEVATOR_OPEN_KEYLESS_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 },
+        { "sprite": "LOCK_ELEVATOR_KEYLESS", "palette": 3 },
+        { "sprite": "NIL", "palette": 3 }]}},
+    "ELEVATOR_OPEN_KEYED": { "renderer": { "type": "Unrendered" } },
     "WALL": { "renderer": { "type": "Unrendered" } },
     "WALL_ALLOCATED": { "renderer": { "type": "Unrendered" } },
     "LIGHTNING_ROD_AWAKENED": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 5 } },

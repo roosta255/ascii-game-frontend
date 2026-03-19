@@ -29,6 +29,26 @@
             "sleepable": false
         }
     },
+    "SPIDER": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 0,
+            "eyes": 3,
+            "sprite": "SPIDER",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
+    "SCORPION": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 0,
+            "eyes": 3,
+            "sprite": "SCORPION",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
     "BUILDER": {
         "renderer": {
             "type": "CharacterRenderer",
