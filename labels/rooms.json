@@ -1,0 +1,11 @@
+{
+    "ELEVATOR":          { "label": "elevator" },
+    "TIME_GATE_TO_FUTURE":{ "label": "time gate" },
+    "TIME_GATE_TO_PAST": { "label": "time gate" },
+    "LIGHTNING_ROD":     { "label": "lightning rod" },
+    "POWER_GENERATOR":   { "label": "power generator" },
+    "RECT_2_x_5":        { "label": "room" },
+    "RECT_4_x_5":        { "label": "room" },
+    "RECT_4_x_1":        { "label": "room" },
+    "RECT_3_x_3":        { "label": "room" }
+}

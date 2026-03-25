@@ -1,0 +1,12 @@
+{
+    "TOGGLER":       { "label": "toggler" },
+    "TOGGLER_BLUE":  { "label": "toggler" },
+    "TOGGLER_ORANGE":{ "label": "toggler" },
+    "SPIDER":        { "label": "spider" },
+    "SCORPION":      { "label": "scorpion" },
+    "BUILDER":       { "label": "builder" },
+    "SNAKE":         { "label": "snake" },
+    "RAT":           { "label": "rat" },
+    "CAT":           { "label": "cat" },
+    "CHEST":         { "label": "chest" }
+}
