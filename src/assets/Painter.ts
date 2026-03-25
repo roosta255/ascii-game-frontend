@@ -5,6 +5,8 @@ import { Renderer, parseRenderer, RenderContext, render } from "./Renderer";
 export interface FlyweightEntry {
     index: number;
     name: string;
+    label?: string;
+    description?: string;
 }
 
 export interface AnimationFlyweight {

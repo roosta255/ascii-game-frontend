@@ -1,0 +1,6 @@
+{
+    "KEY":           { "label": "key" },
+    "KEY_ELEVATOR":  { "label": "elevator key" },
+    "CUBE_AWAKENED": { "label": "cube" },
+    "CUBE_DORMANT":  { "label": "cube" }
+}

@@ -1,0 +1,56 @@
+{
+    "ELEVATOR_CLOSED_KEYED":                  { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYLESS":                { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYED_PAYING_BUTTON":    { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYED_MOVING_BUTTON":    { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYED_CALLING_BUTTON":   { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYLESS_PAYING_BUTTON":  { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYLESS_MOVING_BUTTON":  { "label": "elevator" },
+    "ELEVATOR_CLOSED_KEYLESS_CALLING_BUTTON": { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYED":                    { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYED_PAYING_BUTTON":      { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYED_MOVING_BUTTON":      { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYED_CALLING_BUTTON":     { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYLESS":                  { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYLESS_PAYING_BUTTON":    { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYLESS_MOVING_BUTTON":    { "label": "elevator" },
+    "ELEVATOR_OPEN_KEYLESS_CALLING_BUTTON":   { "label": "elevator" },
+
+    "WALL":           { "label": "wall" },
+    "WALL_ALLOCATED": { "label": "wall" },
+
+    "LIGHTNING_ROD_AWAKENED": { "label": "lightning rod" },
+    "LIGHTNING_ROD_DORMANT":  { "label": "lightning rod" },
+    "LIGHTNING_ROD_EMPTY":    { "label": "lightning rod" },
+
+    "TIME_GATE_AWAKENED": { "label": "time gate" },
+    "TIME_GATE_DORMANT":  { "label": "time gate" },
+    "TIME_GATE_EMPTY":    { "label": "time gate" },
+
+    "LADDER_1_BOTTOM": { "label": "ladder" },
+    "LADDER_1_TOP":    { "label": "ladder" },
+    "POLE_1_BOTTOM":   { "label": "pole" },
+    "POLE_1_TOP":      { "label": "pole" },
+
+    "DOORWAY": { "label": "doorway" },
+
+    "TOGGLER_ORANGE_OPEN":   { "label": "toggler door" },
+    "TOGGLER_ORANGE_CLOSED": { "label": "toggler door" },
+    "TOGGLER_BLUE_OPEN":     { "label": "toggler door" },
+    "TOGGLER_BLUE_CLOSED":   { "label": "toggler door" },
+
+    "KEEPER_EGRESS_KEYED":    { "label": "keeper door" },
+    "KEEPER_INGRESS_KEYED":   { "label": "keeper door" },
+    "KEEPER_EGRESS_KEYLESS":  { "label": "keeper door" },
+    "KEEPER_INGRESS_KEYLESS": { "label": "keeper door" },
+
+    "JAILER_EGRESS_KEYED":    { "label": "jailer door" },
+    "JAILER_INGRESS_KEYED":   { "label": "jailer door" },
+    "JAILER_EGRESS_KEYLESS":  { "label": "jailer door" },
+    "JAILER_INGRESS_KEYLESS": { "label": "jailer door" },
+
+    "SHIFTER_EGRESS_KEYED":    { "label": "shifter door" },
+    "SHIFTER_INGRESS_KEYED":   { "label": "shifter door" },
+    "SHIFTER_EGRESS_KEYLESS":  { "label": "shifter door" },
+    "SHIFTER_INGRESS_KEYLESS": { "label": "shifter door" }
+}

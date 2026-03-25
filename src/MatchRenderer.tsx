@@ -4,6 +4,7 @@ import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
 import { SpritesheetPainter } from "./assets/SpritesheetPainter";
 import { Painter, FlyweightEntry, AnimationFlyweight } from "./assets/Painter";
+import { decorateFlyweights } from "./assets/flyweightLabels";
 import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
@@ -167,6 +168,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     fetch(`${API_BASE}/api/flyweights`)
       .then(res => res.json())
+      .then(raw => decorateFlyweights(raw, import.meta.env.BASE_URL))
       .then(setFlyweights)
       .catch(err => console.error("❌ Failed to load flyweights:", err));
   }, []);
