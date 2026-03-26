@@ -147,6 +147,41 @@ export function createActionDecrementPrediction(baseActions: number, pending: Ke
   return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, Math.max(0, from - 1)], predicted: true };
 }
 
+export function createLockBouncePrediction(roomId: number, direction: number, character: any, times: TimeRef): Keyframe | null {
+  const location = character.location;
+  let animation: string;
+  let source: number = location.data;
+
+  switch (location.type) {
+    case "FLOOR":
+      animation = "DOOR_LOCK_BOUNCE_FROM_FLOOR";
+      break;
+    case "DOOR_SHARED":
+      if (roomId !== location.roomId) {
+        source = (source + 2) % 4;
+      }
+      animation = "DOOR_LOCK_BOUNCE_FROM_DOOR";
+      break;
+    case "DOOR":
+    case "SHAFT_BOTTOM":
+    case "SHAFT_TOP":
+      animation = "DOOR_LOCK_BOUNCE_FROM_DOOR";
+      break;
+    default:
+      return null;
+  }
+
+  const t = performance.now() - times.serverToClientOffset;
+  return {
+    animation,
+    t0: t,
+    t1: t + 2000,
+    room0: roomId,
+    data: [source, direction],
+    predicted: true,
+  };
+}
+
 export function createMovePrediction(roomId: number, floorId: number | undefined, direction: number | undefined, character: any, match: any, times: TimeRef, startTime?: number): Keyframe[] {
     // check the moves
     if (character.remainingMoves <= 0) {

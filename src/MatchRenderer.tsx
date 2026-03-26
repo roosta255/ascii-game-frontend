@@ -9,7 +9,7 @@ import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
-import { createMovePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe, predictedMovesRemaining, predictedActionsRemaining, createMoveDecrementPrediction, createActionDecrementPrediction } from "./types/Keyframe";
+import { createMovePrediction, createLockBouncePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe, predictedMovesRemaining, predictedActionsRemaining, createMoveDecrementPrediction, createActionDecrementPrediction } from "./types/Keyframe";
 import { CellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
@@ -816,6 +816,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableLock(drawX: number, drawY: number, direction: number) {
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        const builderCharacter = match.builders[BUILDER_ID].character;
+        const bouncePrediction = createLockBouncePrediction(roomId, direction, builderCharacter, times);
+        if (bouncePrediction) {
+          const newPredictions = [...predictedMovesRef.current, bouncePrediction];
+          predictedMovesRef.current = newPredictions;
+          setPredictedMoves(newPredictions);
+        }
         await autoTurnEnding(true, false);
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         const stringifiedBody = JSON.stringify(moveBody);
