@@ -16,6 +16,7 @@ import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor
 import { useIsMobile } from "./hooks/useIsMobile";
 import { drawChestAt } from "./drawers/drawChest";
 import { buildEventSentence } from "./functions/buildEventSentence";
+import { FADE_DURATION, HIGHLIGHT_COLOR, NORMAL_COLOR, lerpColor, computeFade, makeEventKey, syncEventTimestamps, resolveAction, computeEventLogRows } from "./functions/eventLogAnimation";
 import "./MatchRenderer.css";
 
 const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
@@ -84,15 +85,20 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // Records the client timestamp when the viewed room last changed. Animations whose server
   // start time maps to before this value are treated as pre-existing and not replayed.
   const roomEntryTimeRef = useRef<number>(performance.now());
-  // Key: `${arrayIndex}_${JSON.stringify(event)}`. Tracks when each event was first seen by the client.
-  const eventLogTimestampsRef = useRef<Map<string, number>>(new Map());
+  // Per-room event timestamps: roomId -> (eventKey -> timeFirstSeen).
+  // Kept across room transitions so returning to a room doesn't re-highlight old events.
+  const eventLogTimestampsRef = useRef<Map<number, Map<string, number>>>(new Map());
+  function getRoomTimestamps(roomId: number): Map<string, number> {
+    if (!eventLogTimestampsRef.current.has(roomId)) {
+      eventLogTimestampsRef.current.set(roomId, new Map());
+    }
+    return eventLogTimestampsRef.current.get(roomId)!;
+  }
 
   useEffect(() => {
     roomEntryTimeRef.current = performance.now();
     shortAnimClocksRef.current.clear();
-    eventLogTimestampsRef.current.clear();
     setSelectedChestId(null);
-    setShowEventLog(false);
   }, [viewedRoomId]);
 
   useEffect(() => {
@@ -259,7 +265,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : isMobile && showEventLog ? 42 + computeEventLogRows(room.eventLog ?? []) : 42),
+    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : isMobile && showEventLog ? 42 + computeEventLogRows(room.eventLog ?? [], eventToSentence, EVENT_LOG_CAPACITY) : 42),
     animatedExtras: [],
   };
 
@@ -364,22 +370,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return name.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  const ACTION_LABELS: Record<string, string> = {
-    SHIFTER_LOCK: 'lock',
-    KEEPER_LOCK: 'lock',
-    MOVE_TO_DOOR: 'move to',
-  };
-
   function resolveLabel(name: string, typename: string): string {
     const entries = typename === 'ROLE' ? flyweights?.roles
       : typename === 'DOOR' ? flyweights?.doors
       : typename === 'ITEM' ? flyweights?.items
       : null;
     return entries?.find(e => e.name === name)?.label ?? name.toLowerCase().replace(/_/g, ' ');
-  }
-
-  function resolveAction(action: string): string {
-    return ACTION_LABELS[action] ?? action.toLowerCase().replace(/_/g, ' ');
   }
 
   function eventToSentence(event: any): string {
@@ -392,33 +388,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     });
   }
 
-  function computeEventLogRows(eventLog: any[]): number {
-    const WIDTH = 39;
-    const visible = eventLog.slice(-EVENT_LOG_CAPACITY);
-    let rows = 2; // header + separator
-    for (const event of visible) {
-      const sentence = eventToSentence(event);
-      rows += Math.ceil(sentence.length / WIDTH) + 1; // wrapped lines + blank line
-    }
-    return Math.max(rows, 3);
-  }
-
-  function lerpColor(a: number, b: number, t: number): number {
-    const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
-    const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
-    const r = Math.round(ar + (br - ar) * t);
-    const g = Math.round(ag + (bg - ag) * t);
-    const b2 = Math.round(ab + (bb - ab) * t);
-    return (r << 16) | (g << 8) | b2;
-  }
 
   function drawEventLogAt(offset: [number, number]) {
     const [ox, oy] = offset;
     const WIDTH = 39;
     const BG = 0x000000;
-    const FADE_DURATION = 5000;
-    const HIGHLIGHT = 0xffff88;
-    const NORMAL = 0xaaaaaa;
     const now = performance.now();
 
     writeText(ox, oy, 'EVENT LOG', 0x888888, BG);
@@ -426,7 +400,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     const eventLog: any[] = room.eventLog ?? [];
     const visible = eventLog.slice(-EVENT_LOG_CAPACITY);
-    const baseIndex = eventLog.length - visible.length;
     let row = oy + 2;
 
     if (visible.length === 0) {
@@ -435,24 +408,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
 
     // Register newly seen events; evict stale keys no longer in the visible window.
-    const currentKeys = new Set<string>();
-    for (let i = 0; i < visible.length; i++) {
-      const key = `${baseIndex + i}_${JSON.stringify(visible[i])}`;
-      currentKeys.add(key);
-      if (!eventLogTimestampsRef.current.has(key)) {
-        eventLogTimestampsRef.current.set(key, now);
-      }
-    }
-    for (const key of eventLogTimestampsRef.current.keys()) {
-      if (!currentKeys.has(key)) eventLogTimestampsRef.current.delete(key);
-    }
+    syncEventTimestamps(visible, getRoomTimestamps(viewedRoomId), now);
 
     for (let i = 0; i < visible.length; i++) {
       const event = visible[i];
-      const key = `${baseIndex + i}_${JSON.stringify(event)}`;
-      const timeAdded = eventLogTimestampsRef.current.get(key) ?? now;
-      const fade = Math.min(1, (now - timeAdded) / FADE_DURATION);
-      const fg = lerpColor(HIGHLIGHT, NORMAL, fade);
+      const key = makeEventKey(event);
+      const timeAdded = getRoomTimestamps(viewedRoomId).get(key) ?? now;
+      const fade = computeFade(timeAdded, now);
+      const fg = lerpColor(HIGHLIGHT_COLOR, NORMAL_COLOR, fade);
 
       const sentence = eventToSentence(event);
       const words = sentence.split(' ');

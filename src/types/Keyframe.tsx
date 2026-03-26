@@ -229,6 +229,6 @@ export function createMovePrediction(roomId: number, floorId: number | undefined
       data: [destination, destination],
       predicted: true,
     };
-    console.log(stand);
+    // console.log(stand);
     return isFloorPrediction ? [move, stand] : [move];
 }
