@@ -19,6 +19,7 @@ import { buildEventSentence } from "./functions/buildEventSentence";
 import "./MatchRenderer.css";
 
 const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
+const EVENT_LOG_CAPACITY = 8;
 
 function debugKeyframes(label: string, keyframes: Keyframe[]) {
   if (!DEBUG_KEYFRAMES) return;
@@ -83,10 +84,13 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   // Records the client timestamp when the viewed room last changed. Animations whose server
   // start time maps to before this value are treated as pre-existing and not replayed.
   const roomEntryTimeRef = useRef<number>(performance.now());
+  // Key: `${arrayIndex}_${JSON.stringify(event)}`. Tracks when each event was first seen by the client.
+  const eventLogTimestampsRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     roomEntryTimeRef.current = performance.now();
     shortAnimClocksRef.current.clear();
+    eventLogTimestampsRef.current.clear();
     setSelectedChestId(null);
     setShowEventLog(false);
   }, [viewedRoomId]);
@@ -361,9 +365,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
   const ACTION_LABELS: Record<string, string> = {
-    SHIFTER_LOCK: 'locks',
-    KEEPER_LOCK: 'locks',
-    MOVE_TO_DOOR: 'moves to',
+    SHIFTER_LOCK: 'lock',
+    KEEPER_LOCK: 'lock',
+    MOVE_TO_DOOR: 'move to',
   };
 
   function resolveLabel(name: string, typename: string): string {
@@ -390,44 +394,79 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   function computeEventLogRows(eventLog: any[]): number {
     const WIDTH = 39;
+    const visible = eventLog.slice(-EVENT_LOG_CAPACITY);
     let rows = 2; // header + separator
-    for (const event of eventLog) {
+    for (const event of visible) {
       const sentence = eventToSentence(event);
       rows += Math.ceil(sentence.length / WIDTH) + 1; // wrapped lines + blank line
     }
     return Math.max(rows, 3);
   }
 
+  function lerpColor(a: number, b: number, t: number): number {
+    const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+    const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+    const r = Math.round(ar + (br - ar) * t);
+    const g = Math.round(ag + (bg - ag) * t);
+    const b2 = Math.round(ab + (bb - ab) * t);
+    return (r << 16) | (g << 8) | b2;
+  }
+
   function drawEventLogAt(offset: [number, number]) {
     const [ox, oy] = offset;
     const WIDTH = 39;
     const BG = 0x000000;
+    const FADE_DURATION = 5000;
+    const HIGHLIGHT = 0xffff88;
+    const NORMAL = 0xaaaaaa;
+    const now = performance.now();
 
     writeText(ox, oy, 'EVENT LOG', 0x888888, BG);
     writeText(ox, oy + 1, '\u2500'.repeat(WIDTH), 0x444444, BG);
 
     const eventLog: any[] = room.eventLog ?? [];
+    const visible = eventLog.slice(-EVENT_LOG_CAPACITY);
+    const baseIndex = eventLog.length - visible.length;
     let row = oy + 2;
 
-    if (eventLog.length === 0) {
+    if (visible.length === 0) {
       writeText(ox, row, 'No events yet.', 0x555555, BG);
       return;
     }
 
-    for (const event of eventLog) {
+    // Register newly seen events; evict stale keys no longer in the visible window.
+    const currentKeys = new Set<string>();
+    for (let i = 0; i < visible.length; i++) {
+      const key = `${baseIndex + i}_${JSON.stringify(visible[i])}`;
+      currentKeys.add(key);
+      if (!eventLogTimestampsRef.current.has(key)) {
+        eventLogTimestampsRef.current.set(key, now);
+      }
+    }
+    for (const key of eventLogTimestampsRef.current.keys()) {
+      if (!currentKeys.has(key)) eventLogTimestampsRef.current.delete(key);
+    }
+
+    for (let i = 0; i < visible.length; i++) {
+      const event = visible[i];
+      const key = `${baseIndex + i}_${JSON.stringify(event)}`;
+      const timeAdded = eventLogTimestampsRef.current.get(key) ?? now;
+      const fade = Math.min(1, (now - timeAdded) / FADE_DURATION);
+      const fg = lerpColor(HIGHLIGHT, NORMAL, fade);
+
       const sentence = eventToSentence(event);
       const words = sentence.split(' ');
       let line = '';
       for (const word of words) {
         const candidate = line ? `${line} ${word}` : word;
         if (candidate.length > WIDTH) {
-          writeText(ox, row++, line, 0xaaaaaa, BG);
+          writeText(ox, row++, line, fg, BG);
           line = word;
         } else {
           line = candidate;
         }
       }
-      if (line) writeText(ox, row++, line, 0xaaaaaa, BG);
+      if (line) writeText(ox, row++, line, fg, BG);
       row++; // blank line between events
     }
   }
