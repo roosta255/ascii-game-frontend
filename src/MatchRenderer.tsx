@@ -15,6 +15,7 @@ import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { drawChestAt } from "./drawers/drawChest";
+import { buildEventSentence } from "./functions/buildEventSentence";
 import "./MatchRenderer.css";
 
 const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
@@ -64,7 +65,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const isMobile = useIsMobile();
   const [showInventory, setShowInventory] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
-  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character' | 'chest'>('inventory');
+  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character' | 'chest' | 'log'>('inventory');
+  const [showEventLog, setShowEventLog] = useState(false);
   const [selectedChestId, setSelectedChestId] = useState<number | null>(null);
   const [sheetPage, setSheetPage] = useState('attributes');
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
@@ -86,6 +88,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     roomEntryTimeRef.current = performance.now();
     shortAnimClocksRef.current.clear();
     setSelectedChestId(null);
+    setShowEventLog(false);
   }, [viewedRoomId]);
 
   useEffect(() => {
@@ -252,7 +255,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : 42),
+    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : isMobile && showEventLog ? 42 + computeEventLogRows(room.eventLog ?? []) : 42),
     animatedExtras: [],
   };
 
@@ -355,6 +358,78 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   function formatTrait(name: string): string {
     return name.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  const ACTION_LABELS: Record<string, string> = {
+    SHIFTER_LOCK: 'locks',
+    KEEPER_LOCK: 'locks',
+    MOVE_TO_DOOR: 'moves to',
+  };
+
+  function resolveLabel(name: string, typename: string): string {
+    const entries = typename === 'ROLE' ? flyweights?.roles
+      : typename === 'DOOR' ? flyweights?.doors
+      : typename === 'ITEM' ? flyweights?.items
+      : null;
+    return entries?.find(e => e.name === name)?.label ?? name.toLowerCase().replace(/_/g, ' ');
+  }
+
+  function resolveAction(action: string): string {
+    return ACTION_LABELS[action] ?? action.toLowerCase().replace(/_/g, ' ');
+  }
+
+  function eventToSentence(event: any): string {
+    return buildEventSentence({
+      actor: resolveLabel(event.actor.name, event.actor.typename),
+      action: resolveAction(event.action),
+      tool: event.tool ? resolveLabel(event.tool.name, event.tool.typename) : undefined,
+      target: event.target ? resolveLabel(event.target.name, event.target.typename) : undefined,
+      direction: event.direction?.toLowerCase(),
+    });
+  }
+
+  function computeEventLogRows(eventLog: any[]): number {
+    const WIDTH = 39;
+    let rows = 2; // header + separator
+    for (const event of eventLog) {
+      const sentence = eventToSentence(event);
+      rows += Math.ceil(sentence.length / WIDTH) + 1; // wrapped lines + blank line
+    }
+    return Math.max(rows, 3);
+  }
+
+  function drawEventLogAt(offset: [number, number]) {
+    const [ox, oy] = offset;
+    const WIDTH = 39;
+    const BG = 0x000000;
+
+    writeText(ox, oy, 'EVENT LOG', 0x888888, BG);
+    writeText(ox, oy + 1, '\u2500'.repeat(WIDTH), 0x444444, BG);
+
+    const eventLog: any[] = room.eventLog ?? [];
+    let row = oy + 2;
+
+    if (eventLog.length === 0) {
+      writeText(ox, row, 'No events yet.', 0x555555, BG);
+      return;
+    }
+
+    for (const event of eventLog) {
+      const sentence = eventToSentence(event);
+      const words = sentence.split(' ');
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (candidate.length > WIDTH) {
+          writeText(ox, row++, line, 0xaaaaaa, BG);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) writeText(ox, row++, line, 0xaaaaaa, BG);
+      row++; // blank line between events
+    }
   }
 
   function drawCharacterSheetAt(offset: [number, number]) {
@@ -519,7 +594,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       }
       const chestIndex = chestOffsetMap[character.offset];
       if (chestIndex != null) {
-        globals.painters.roles.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick: () => { setSelectedChestId(chestIndex); setRightPanelMode('chest'); }}});
+        globals.painters.roles.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick: () => { setSelectedChestId(chestIndex); setRightPanelMode('chest'); setShowEventLog(false); }}});
         return;
       }
       const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
@@ -1016,12 +1091,25 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     } else {
       writeText(51, 11, 'CHARACTER', 0x555555, 0x000000, () => setRightPanelMode('character'));
     }
+    const logActive = rightPanelMode === 'log';
+    if (logActive) {
+      for (let bx = 60; bx <= 64; bx++) {
+        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+      }
+      if (globals.glyphs[11]?.[60]) globals.glyphs[11][60] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(61, 11, 'LOG', 0x000000, PANEL_HL, () => setRightPanelMode('log'));
+      if (globals.glyphs[11]?.[64]) globals.glyphs[11][64] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+    } else {
+      writeText(61, 11, 'LOG', 0x555555, 0x000000, () => setRightPanelMode('log'));
+    }
     const chest = selectedChestId != null ? (match.dungeon.chests ?? [])[selectedChestId] : null;
     if (rightPanelMode === 'chest' && chest) {
       drawInventoryAt([41, 13]);
       drawChestAt([76, 13], { ...chestProps, chest });
     } else if (rightPanelMode === 'inventory') {
       drawInventoryAt([41, 13]);
+    } else if (rightPanelMode === 'log') {
+      drawEventLogAt([41, 13]);
     } else {
       drawCharacterSheetAt([41, 13]);
     }
@@ -1033,6 +1121,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     drawInventoryAt([0, 41]);
   } else if (showCharacter) {
     drawCharacterSheetAt([0, 41]);
+  } else if (showEventLog) {
+    drawEventLogAt([0, 42]);
   }
 
 
@@ -1065,12 +1155,15 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           </button>
         )}
         {!player.inventory.isEmpty && (
-          <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowInventory(v => !v); setShowCharacter(false); setSelectedChestId(null); }}>
+          <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowInventory(v => !v); setShowCharacter(false); setShowEventLog(false); setSelectedChestId(null); }}>
             {showInventory ? "Close Inventory" : "Inventory"}
           </button>
         )}
-        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); setSelectedChestId(null); }}>
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); setShowEventLog(false); setSelectedChestId(null); }}>
           {showCharacter ? "Close Character" : "Character"}
+        </button>
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowEventLog(v => !v); setShowInventory(false); setShowCharacter(false); setSelectedChestId(null); }}>
+          {showEventLog ? "Close Log" : "Log"}
         </button>
       </div>
     )}
