@@ -1,5 +1,5 @@
-import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor } from "./RoomProps";
-import { lerp, skip } from "../functions/Curves";
+import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./RoomProps";
+import { lerp, skip, bounce } from "../functions/Curves";
 import { TimeRef } from "./TimeRef";
 
 export interface Keyframe {
@@ -68,6 +68,18 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
           toFloorGlyphsFromCell(room, k.data[1]),
           toFloorGlyphsFromCell(room, k.data[1]),
           skip];
+        case "DOOR_LOCK_BOUNCE_FROM_FLOOR": {
+          return [
+            toFloorGlyphsFromCell(room, k.data[0]),
+            toFloorGlyphsFromLock(room, k.data[1]),
+            bounce];
+        }
+        case "DOOR_LOCK_BOUNCE_FROM_DOOR": {
+          return [
+            toFloorGlyphsFromDoor(room, k.data[0]),
+            toFloorGlyphsFromLock(room, k.data[1]),
+            bounce];
+        }
       }
       return null;
     }
@@ -83,8 +95,11 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       digest = { source: xy0, destination: xy1, t0: k.t0, t1: k.t1, curve };
     } else if (animationTime >= k.t1 && k.t1 > lastExpiredT1) {
       // track the most recently expired movement so non-movement animations
-      // (e.g. transition animations) can still render at the correct position
-      lastExpiredPosition = xy1;
+      // (e.g. transition animations) can still render at the correct position.
+      // bounce animations return the character to their starting position (xy0),
+      // not the lock they bounced toward (xy1).
+      const isBounce = k.animation === "DOOR_LOCK_BOUNCE_FROM_FLOOR" || k.animation === "DOOR_LOCK_BOUNCE_FROM_DOOR";
+      lastExpiredPosition = isBounce ? xy0 : xy1;
       lastExpiredT1 = k.t1;
     }
 
@@ -97,6 +112,7 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
   const fallback = lastExpiredPosition ?? defaultPosition ?? [0, 0];
   return { source: fallback, destination: fallback, t0: 0, t1: 1, curve: skip };
 }
+
 
 export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: Keyframe): boolean {
   return target.animation == source.animation && target.data[1] == source.data[1];

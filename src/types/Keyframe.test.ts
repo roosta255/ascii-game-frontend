@@ -3,8 +3,11 @@ import {
   Keyframe,
   isKeyframeAnimating,
   isKeyframeDuplicate,
+  digestKeyframes,
   createMovePrediction,
 } from './Keyframe';
+import { bounce } from '../functions/Curves';
+import { RoomProps } from './RoomProps';
 import { TimeRef } from './TimeRef';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -375,5 +378,172 @@ describe('async server response timing', () => {
     // predicted[0] (move to 3) does not match serverNextMove (move to 7) — both kept
     expect(result.keyframes).toHaveLength(3); // move, stand, serverNextMove
     expect(result.keyframes[2].data[2]).toBe(7);
+  });
+});
+
+// ── bounce curve ──────────────────────────────────────────────────────────────
+
+describe('bounce curve', () => {
+  it('at ratio=0 returns source (start)', () => {
+    expect(bounce(10, 30, 0)).toBeCloseTo(10, 5);
+  });
+
+  it('at ratio=0.5 returns destination (peak)', () => {
+    expect(bounce(10, 30, 0.5)).toBeCloseTo(30, 5);
+  });
+
+  it('at ratio=1 returns source (full return)', () => {
+    expect(bounce(10, 30, 1)).toBeCloseTo(10, 5);
+  });
+
+  it('at ratio=0.25 is between source and destination', () => {
+    const v = bounce(10, 30, 0.25);
+    expect(v).toBeGreaterThan(10);
+    expect(v).toBeLessThan(30);
+  });
+
+  it('is symmetric: value at ratio r equals value at ratio 1-r', () => {
+    expect(bounce(0, 100, 0.2)).toBeCloseTo(bounce(0, 100, 0.8), 5);
+  });
+});
+
+// ── digestKeyframes bounce animations ─────────────────────────────────────────
+//
+// Helper: evaluate the rendered position for the active keyframe digest,
+// mirroring the Math.floor(curve(source, dest, ratio)) logic in AnimatedCharacter.
+function evalPos(
+  keyframes: Keyframe[],
+  animationTime: number,
+  room: RoomProps,
+  fallback?: [number, number]
+): [number, number] {
+  const d = digestKeyframes(keyframes, animationTime, room, fallback);
+  const ratio = d.t1 > d.t0 ? (animationTime - d.t0) / (d.t1 - d.t0) : 0;
+  return [
+    Math.floor(d.curve(d.source[0], d.destination[0], ratio)),
+    Math.floor(d.curve(d.source[1], d.destination[1], ratio)),
+  ];
+}
+
+// ── RECT_4_x_5 south-lock regression ──────────────────────────────────────────
+// Exact data from public/rooms.json "RECT_4_x_5", room placed at origin.
+//
+// cells.offset=[8,8]  cells.stride=[6,5]
+// walls[0] N: door=[14, 3] lock=[26, 3]
+// walls[1] E: door=[32,18] lock=[32, 8]
+// walls[2] S: door=[14,33] lock=[26,33]  ← target
+// walls[3] W: door=[ 2,18] lock=[ 2, 8]
+//
+// floor cell 0: [0*6+0+8, 0*5+0+8] = [8, 8]
+// south lock:   [26, 33]
+// north door:   [14,  3]
+
+describe('digestKeyframes bounce — RECT_4_x_5 south lock', () => {
+  const T0 = 0;
+  const T1 = 2000;
+  const MID = 1000; // ratio=0.5 → peak
+
+  const rect4x5: RoomProps = {
+    index: 0,
+    position: [0, 0],
+    size: [4, 5],
+    cells: {
+      stride: [6, 5],
+      offset: [8, 8],
+      walls: [
+        { door: { offset: [14,  3] }, lock: { offset: [26,  3] } }, // N
+        { door: { offset: [32, 18] }, lock: { offset: [32,  8] } }, // E
+        { door: { offset: [14, 33] }, lock: { offset: [26, 33] } }, // S
+        { door: { offset: [ 2, 18] }, lock: { offset: [ 2,  8] } }, // W
+      ],
+    },
+  };
+
+  // FROM_FLOOR: character on floor cell 0, bouncing toward south lock (dir=2)
+  it('FROM_FLOOR: at start returns floor cell 0 position [8,8]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, T0, rect4x5)).toEqual([8, 8]);
+  });
+
+  it('FROM_FLOOR: at peak (ratio=0.5) reaches south lock [26,33]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, MID, rect4x5)).toEqual([26, 33]);
+  });
+
+  it('FROM_FLOOR: after expiry lastExpiredPosition is source [8,8], not lock [26,33]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 2])];
+    // animationTime after t1: digest falls through to lastExpiredPosition
+    expect(evalPos(kfs, T1 + 1, rect4x5)).toEqual([8, 8]);
+  });
+
+  // FROM_DOOR: character at north door (dir=0), bouncing toward south lock (dir=2)
+  it('FROM_DOOR: at start returns north door position [14,3]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_DOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, T0, rect4x5)).toEqual([14, 3]);
+  });
+
+  it('FROM_DOOR: at peak reaches south lock [26,33]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_DOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, MID, rect4x5)).toEqual([26, 33]);
+  });
+
+  it('FROM_DOOR: after expiry lastExpiredPosition is source [14,3], not lock [26,33]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_DOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, T1 + 1, rect4x5)).toEqual([14, 3]);
+  });
+});
+
+// ── RECT_2_x_5 east and south lock regression ─────────────────────────────────
+// Exact data from public/rooms.json "RECT_2_x_5", room placed at origin.
+//
+// cells.offset=[14,8]  cells.stride=[6,5]
+// walls[0] N: door=[17, 3]              no lock
+// walls[1] E: door=[26,18] lock=[26, 8] ← east lock
+// walls[2] S: door=[17,33]              no lock → falls back to door pos
+// walls[3] W: door=[ 8,18] lock=[ 8, 8]
+//
+// floor cell 0: [0*6+0+14, 0*5+0+8] = [14, 8]
+
+describe('digestKeyframes bounce — RECT_2_x_5 east and south', () => {
+  const T0 = 0;
+  const T1 = 2000;
+  const MID = 1000;
+
+  const rect2x5: RoomProps = {
+    index: 0,
+    position: [0, 0],
+    size: [2, 5],
+    cells: {
+      stride: [6, 5],
+      offset: [14, 8],
+      walls: [
+        { door: { offset: [17,  3] }                                }, // N  no lock
+        { door: { offset: [26, 18] }, lock: { offset: [26,  8] } }, // E
+        { door: { offset: [17, 33] }                                }, // S  no lock
+        { door: { offset: [ 8, 18] }, lock: { offset: [ 8,  8] } }, // W
+      ],
+    },
+  };
+
+  // East lock (dir=1): lock exists at [26,8]
+  it('east lock: at peak reaches lock position [26,8]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 1])];
+    expect(evalPos(kfs, MID, rect2x5)).toEqual([26, 8]);
+  });
+
+  it('east lock: at start returns floor cell 0 position [14,8]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 1])];
+    expect(evalPos(kfs, T0, rect2x5)).toEqual([14, 8]);
+  });
+
+  // South (dir=2): no lock — falls back to door position [17,33]
+  it('south (no lock): at peak falls back to door position [17,33]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, MID, rect2x5)).toEqual([17, 33]);
+  });
+
+  it('south (no lock): at start returns floor cell 0 position [14,8]', () => {
+    const kfs = [kf('DOOR_LOCK_BOUNCE_FROM_FLOOR', T0, T1, 0, [0, 2])];
+    expect(evalPos(kfs, T0, rect2x5)).toEqual([14, 8]);
   });
 });
