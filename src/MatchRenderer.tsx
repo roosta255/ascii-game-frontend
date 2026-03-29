@@ -73,6 +73,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [sheetPage, setSheetPage] = useState('attributes');
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
+  const [requestErrorLog, setRequestErrorLog] = useState<any[] | null>(null);
   // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
   // read the latest value synchronously without waiting for a React re-render.
   const predictedStatsRef = useRef<Keyframe[]>([]);
@@ -297,6 +298,29 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const times = timeRef.current;
   const isMatchStarted = !!match.isStarted;
 
+  async function handleApiResponse(res: Response): Promise<{ ok: boolean; json: any }> {
+    const text = await res.text();
+    let json: any = null;
+    try {
+      const parsed = JSON.parse(text);
+      json = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+    } catch {}
+
+    if (!res.ok) {
+      console.info(`❌ HTTP ${res.status}`);
+      console.error(text);
+      if (json?.eventLog) {
+        setRequestErrorLog(json.eventLog);
+      } else {
+        setRequestErrorLog([{ action: "UNKNOWN_ERROR" }]);
+      }
+      return { ok: false, json };
+    }
+
+    setRequestErrorLog(null);
+    return { ok: true, json };
+  }
+
   async function autoTurnEnding(
     isActing: boolean,
     isMoving: boolean
@@ -389,7 +413,15 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   }
 
 
-  function drawEventLogAt(offset: [number, number]) {
+  function safeEventToSentence(event: any): string {
+    try {
+      return eventToSentence(event);
+    } catch {
+      return event.action?.toLowerCase().replace(/_/g, ' ') ?? 'unknown error';
+    }
+  }
+
+  function drawEventLogAt(offset: [number, number], errorLog?: any[] | null) {
     const [ox, oy] = offset;
     const WIDTH = 39;
     const BG = 0x000000;
@@ -404,8 +436,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     if (visible.length === 0) {
       writeText(ox, row, 'No events yet.', 0x555555, BG);
-      return;
-    }
+      row++;
+    } else {
 
     // Register newly seen events; evict stale keys no longer in the visible window.
     syncEventTimestamps(visible, getRoomTimestamps(viewedRoomId), now);
@@ -431,6 +463,32 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       }
       if (line) writeText(ox, row++, line, fg, BG);
       row++; // blank line between events
+    }
+    } // end else (visible.length > 0)
+
+    // --- ERROR LOG BLOCK ---
+    if (errorLog && errorLog.length > 0) {
+      row++; // spacing
+      writeText(ox, row++, '--- ACTION FAILED ---', 0xff5555, BG);
+
+      for (const event of errorLog) {
+        const sentence = safeEventToSentence(event);
+        const words = sentence.split(' ');
+        let line = '';
+
+        for (const word of words) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (candidate.length > WIDTH) {
+            writeText(ox, row++, line, 0xff5555, BG);
+            line = word;
+          } else {
+            line = candidate;
+          }
+        }
+
+        if (line) writeText(ox, row++, line, 0xff5555, BG);
+        row++;
+      }
     }
   }
 
@@ -618,15 +676,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             },
             body: stringifiedBody,
           });
-          if (!response.ok) {
-            console.warn(`Failed to activate character, body: ${stringifiedBody}`);
-            console.error("Failed to activate character, response:", await response.text());
+          const { ok } = await handleApiResponse(response);
+          if (!ok) {
             predictedStatsRef.current = [];
-          } else {
-            console.log("Character activated");
-            await refreshMatch();
-            predictedStatsRef.current = [];
+            return;
           }
+          console.log("Character activated");
+          await refreshMatch();
+          predictedStatsRef.current = [];
         } catch (error) {
           console.error("Error activating character:", error);
           predictedStatsRef.current = [];
@@ -827,27 +884,16 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         const moveBody = { account, character: builderOffset, room: roomId, direction };
         const stringifiedBody = JSON.stringify(moveBody);
         getSynth().playSquare(220);
-        fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
+        const lockRes = await fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: stringifiedBody,
-        })
-          .then(async res => {
-            const bodyText = await res.text();
-            console.log("Lock request:", stringifiedBody);
-            if (!res.ok) {
-              console.info(`❌ HTTP ${res.status} request: `, moveBody);
-              console.error(`❌ HTTP ${res.status} response: `, bodyText);
-              throw new Error(`HTTP ${res.status}`);
-            }
-            try {
-              console.log("✅ Lock success response:", JSON.parse(bodyText));
-              await refreshMatch();
-            } catch {
-              console.warn("⚠️ Non-JSON response:", bodyText);
-            }
-          })
-          .catch(err => console.error("❌ Move failed:", err));
+        });
+        console.log("Lock request:", stringifiedBody);
+        const { ok: lockOk, json: lockJson } = await handleApiResponse(lockRes);
+        if (!lockOk) return;
+        console.log("✅ Lock success response:", lockJson);
+        await refreshMatch();
       });
     }
 
@@ -857,9 +903,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         let [dx, dy] = toFloorGlyphsFromDoor(roomProps, i);
         const cell = wall.cell;
 
-        if (wall.door === "KEEPER_INGRESS_KEYED" && wall.keyframes?.some((k: Keyframe) => k.animation !== "NIL")){
-          console.log(wall.keyframes);
-        }
         if (wall.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
           globals.animatedExtras.push(
             <AnimatedCharacter
@@ -1082,34 +1125,34 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     const chrActive = rightPanelMode === 'character';
     if (invActive) {
       for (let bx = 40; bx <= 50; bx++) {
-        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+        if (globals.glyphs[0]?.[bx]) globals.glyphs[0][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
       }
-      if (globals.glyphs[11]?.[40]) globals.glyphs[11][40] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
-      writeText(41, 11, 'INVENTORY', 0x000000, PANEL_HL, () => setRightPanelMode('inventory'));
-      if (globals.glyphs[11]?.[50]) globals.glyphs[11][50] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+      if (globals.glyphs[1]?.[40]) globals.glyphs[1][40] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(41, 1, 'INVENTORY', 0x000000, PANEL_HL, () => setRightPanelMode('inventory'));
+      if (globals.glyphs[1]?.[50]) globals.glyphs[1][50] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
     } else {
-      writeText(41, 11, 'INVENTORY', 0x555555, 0x000000, () => setRightPanelMode('inventory'));
+      writeText(41, 1, 'INVENTORY', 0x555555, 0x000000, () => setRightPanelMode('inventory'));
     }
     if (chrActive) {
       for (let bx = 50; bx <= 60; bx++) {
-        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+        if (globals.glyphs[0]?.[bx]) globals.glyphs[0][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
       }
-      if (globals.glyphs[11]?.[50]) globals.glyphs[11][50] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
-      writeText(51, 11, 'CHARACTER', 0x000000, PANEL_HL, () => setRightPanelMode('character'));
-      if (globals.glyphs[11]?.[60]) globals.glyphs[11][60] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+      if (globals.glyphs[1]?.[50]) globals.glyphs[1][50] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(51, 1, 'CHARACTER', 0x000000, PANEL_HL, () => setRightPanelMode('character'));
+      if (globals.glyphs[1]?.[60]) globals.glyphs[1][60] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
     } else {
-      writeText(51, 11, 'CHARACTER', 0x555555, 0x000000, () => setRightPanelMode('character'));
+      writeText(51, 1, 'CHARACTER', 0x555555, 0x000000, () => setRightPanelMode('character'));
     }
     const logActive = rightPanelMode === 'log';
     if (logActive) {
       for (let bx = 60; bx <= 64; bx++) {
-        if (globals.glyphs[10]?.[bx]) globals.glyphs[10][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+        if (globals.glyphs[0]?.[bx]) globals.glyphs[0][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
       }
-      if (globals.glyphs[11]?.[60]) globals.glyphs[11][60] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
-      writeText(61, 11, 'LOG', 0x000000, PANEL_HL, () => setRightPanelMode('log'));
-      if (globals.glyphs[11]?.[64]) globals.glyphs[11][64] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+      if (globals.glyphs[1]?.[60]) globals.glyphs[1][60] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(61, 1, 'LOG', 0x000000, PANEL_HL, () => setRightPanelMode('log'));
+      if (globals.glyphs[1]?.[64]) globals.glyphs[1][64] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
     } else {
-      writeText(61, 11, 'LOG', 0x555555, 0x000000, () => setRightPanelMode('log'));
+      writeText(61, 1, 'LOG', 0x555555, 0x000000, () => setRightPanelMode('log'));
     }
     const chest = selectedChestId != null ? (match.dungeon.chests ?? [])[selectedChestId] : null;
     if (rightPanelMode === 'chest' && chest) {
@@ -1118,9 +1161,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     } else if (rightPanelMode === 'inventory') {
       drawInventoryAt([41, 13]);
     } else if (rightPanelMode === 'log') {
-      drawEventLogAt([41, 13]);
+      drawEventLogAt([41, 3], requestErrorLog);
     } else {
-      drawCharacterSheetAt([41, 13]);
+      drawCharacterSheetAt([41, 3]);
     }
   } else if (isMobile && selectedChestId != null && (match.dungeon.chests ?? [])[selectedChestId]) {
     drawInventoryAt([0, 41]);
@@ -1131,7 +1174,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   } else if (showCharacter) {
     drawCharacterSheetAt([0, 41]);
   } else if (showEventLog) {
-    drawEventLogAt([0, 42]);
+    drawEventLogAt([0, 42], requestErrorLog);
   }
 
 
