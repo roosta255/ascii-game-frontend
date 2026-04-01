@@ -18,6 +18,8 @@ export default function MatchPage() {
     fetchTime: 0,
   });
 
+  const pendingRequests = useRef(0);
+
   function findRoomIdForOffset(match: any, offset: number): number | null {
     for (let i = 0; i < match.dungeon.rooms.length; i++) {
       const room = match.dungeon.rooms[i];
@@ -78,6 +80,8 @@ export default function MatchPage() {
     let isMounted = true;
 
     async function fetchUpdates() {
+      if (pendingRequests.current >= 5) return;
+      pendingRequests.current++;
       try {
         const res = await fetch(`${API_BASE}/api/match/${id}`);
         if (!res.ok) throw new Error(`Failed to fetch match ${id}`);
@@ -89,6 +93,8 @@ export default function MatchPage() {
         updateTimeRef(timeRef.current, data.serverTime);
       } catch (err) {
         console.error("Polling update failed:", err);
+      } finally {
+        pendingRequests.current--;
       }
     }
 

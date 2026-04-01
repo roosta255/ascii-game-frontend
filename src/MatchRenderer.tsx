@@ -60,6 +60,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [animationSheet, setAnimationSheet] = useState<SpritesheetPainter | null>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
   const [flyweights, setFlyweights] = useState<{ roles: FlyweightEntry[]; doors: FlyweightEntry[]; locks: FlyweightEntry[]; items: FlyweightEntry[]; animations: AnimationFlyweight[]; } | null>(null);
+  const [lockRules, setLockRules] = useState<any[] | null>(null);
 
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
@@ -74,6 +75,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
   const [requestErrorLog, setRequestErrorLog] = useState<any[] | null>(null);
+  const [interaction, setInteraction] = useState<{
+    type: 'idle' | 'awaitingItem';
+    target?: { kind: 'lock'; direction: number };
+    validItemTypes?: string[];
+  }>(() => ({ type: 'idle' }));
   // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
   // read the latest value synchronously without waiting for a React re-render.
   const predictedStatsRef = useRef<Keyframe[]>([]);
@@ -185,6 +191,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       .then(raw => decorateFlyweights(raw, import.meta.env.BASE_URL))
       .then(setFlyweights)
       .catch(err => console.error("❌ Failed to load flyweights:", err));
+
+    fetch(`${API_BASE}/api/flyweights/rules`)
+      .then(res => res.json())
+      .then(setLockRules)
+      .catch(err => console.error("❌ Failed to load flyweights/rules:", err));
   }, []);
 
   useEffect(() => {
@@ -208,6 +219,16 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
     return () => clearInterval(id);
   }, [roomTransition]);
+
+  useEffect(() => {
+    const cancel = () => {
+      if (interaction.type !== 'idle') {
+        setInteraction({ type: 'idle' });
+      }
+    };
+    window.addEventListener('keydown', cancel);
+    return () => window.removeEventListener('keydown', cancel);
+  }, [interaction]);
 
   const lastLoggedKeyframesRef = useRef<string>('');
   // Log server keyframes whenever they actually change
@@ -625,6 +646,31 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   }
 
+  async function activateLock(direction: number, itemIndex?: number) {
+    const builderCharacter = match.builders[BUILDER_ID].character;
+    const bouncePrediction = createLockBouncePrediction(viewedRoomId, direction, builderCharacter, times);
+    if (bouncePrediction) {
+      const newPredictions = [...predictedMovesRef.current, bouncePrediction];
+      predictedMovesRef.current = newPredictions;
+      setPredictedMoves(newPredictions);
+    }
+    await autoTurnEnding(true, false);
+    const moveBody: any = { account, character: builderOffset, room: viewedRoomId, direction };
+    if (itemIndex !== undefined) moveBody.item = itemIndex;
+    const stringifiedBody = JSON.stringify(moveBody);
+    getSynth().playSquare(220);
+    const lockRes = await fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: stringifiedBody,
+    });
+    console.log("Lock request:", stringifiedBody);
+    const { ok: lockOk, json: lockJson } = await handleApiResponse(lockRes);
+    if (!lockOk) return;
+    console.log("✅ Lock success response:", lockJson);
+    await refreshMatch();
+  }
+
   function drawRoomAt(roomX: number, roomY: number, room: any, roomId: number) {
 
     // TODO: remove global mutation
@@ -870,30 +916,31 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       });
     }
 
+    function getMatchingLockRules(direction: number): any[] {
+      if (!lockRules) return [];
+      const doorType = room.walls[direction].door;
+      return lockRules.filter(rule => rule.target === doorType);
+    }
+
     function setClickableLock(drawX: number, drawY: number, direction: number) {
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
-        const builderCharacter = match.builders[BUILDER_ID].character;
-        const bouncePrediction = createLockBouncePrediction(roomId, direction, builderCharacter, times);
-        if (bouncePrediction) {
-          const newPredictions = [...predictedMovesRef.current, bouncePrediction];
-          predictedMovesRef.current = newPredictions;
-          setPredictedMoves(newPredictions);
+        const rules = getMatchingLockRules(direction);
+        const itemRules = rules.filter(r => r.requiresItem);
+        const noItemRules = rules.filter(r => !r.requiresItem);
+
+        if (itemRules.length > 0) {
+          setInteraction({
+            type: 'awaitingItem',
+            target: { kind: 'lock', direction },
+            validItemTypes: itemRules.map(r => r.itemType),
+          });
+          return;
         }
-        await autoTurnEnding(true, false);
-        const moveBody = { account, character: builderOffset, room: roomId, direction };
-        const stringifiedBody = JSON.stringify(moveBody);
-        getSynth().playSquare(220);
-        const lockRes = await fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: stringifiedBody,
-        });
-        console.log("Lock request:", stringifiedBody);
-        const { ok: lockOk, json: lockJson } = await handleApiResponse(lockRes);
-        if (!lockOk) return;
-        console.log("✅ Lock success response:", lockJson);
-        await refreshMatch();
+
+        if (noItemRules.length > 0 || rules.length === 0) {
+          await activateLock(direction);
+        }
       });
     }
 
@@ -1057,7 +1104,26 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       stride: [6, 6],
     }
     for (const item of player.inventory.items) {
+      const isHighlighted =
+        interaction.type === 'awaitingItem' &&
+        interaction.validItemTypes?.includes(item.type);
+
       const onClick = !item.isActionable ? undefined : async () => {
+        // Interaction mode: use item on a lock
+        if (interaction.type === 'awaitingItem') {
+          if (!interaction.validItemTypes?.includes(item.type)) {
+            getSynth().error?.();
+            return;
+          }
+          if (interaction.target?.kind === 'lock') {
+            // activateLock is defined inside drawRoomAt; call it via the ref captured below
+            await activateLock(interaction.target.direction, item.index);
+          }
+          setInteraction({ type: 'idle' });
+          return;
+        }
+
+        // Normal inventory activation
         try {
           getSynth().playSquare(220);
           const builderCharacter = match.builders[BUILDER_ID].character;
@@ -1105,6 +1171,14 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         );
       } else if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
+        if (isHighlighted) {
+          for (let dy = 0; dy < 6; dy++) {
+            for (let dx = 0; dx < 6; dx++) {
+              const g = globals.glyphs[itemDraw[1] + dy]?.[itemDraw[0] + dx];
+              if (g) g.bg = 0x225522;
+            }
+          }
+        }
         if (item.stacks > 1) {
           const sx = itemDraw[0] + 3;
           const sy = itemDraw[1] + 5;
