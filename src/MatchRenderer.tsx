@@ -342,49 +342,6 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     return { ok: true, json };
   }
 
-  async function autoTurnEnding(
-    isActing: boolean,
-    isMoving: boolean
-  ): Promise<boolean> {
-    const builder = match.builders[BUILDER_ID].character;
-
-    const shouldEndTurn =
-      (isMoving && builder.movesRemaining === 0) ||
-      (isActing && builder.actionsRemaining === 0);
-
-    if (!shouldEndTurn) {
-      return false;
-    }
-
-    const endTurnBody = { account };
-
-    const res = await fetch(
-      `${API_BASE}/api/match/${match.filename}/end_turn`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(endTurnBody),
-      }
-    );
-
-    const bodyText = await res.text();
-
-    if (!res.ok) {
-      console.info(`❌ HTTP ${res.status} request: `, endTurnBody);
-      console.error(`❌ HTTP ${res.status} response: `, bodyText);
-      throw new Error(`End turn failed (${res.status})`);
-    } else {
-      console.info(`OK HTTP response to end_turn from `, bodyText);
-    }
-
-    // Only refresh if the end turn succeeded
-    await refreshMatch();
-
-    console.log("✅ End Turn (auto) success");
-
-    return true;
-  }
-
   function markRegionClickable(
     startX: number,
     startY: number,
@@ -654,8 +611,9 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       predictedMovesRef.current = newPredictions;
       setPredictedMoves(newPredictions);
     }
-    await autoTurnEnding(true, false);
-    const moveBody: any = { account, character: builderOffset, room: viewedRoomId, direction };
+    const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+    predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+    const moveBody: any = { account, character: builderOffset, room: viewedRoomId, direction, isForcedTurnEnd };
     if (itemIndex !== undefined) moveBody.item = itemIndex;
     const stringifiedBody = JSON.stringify(moveBody);
     getSynth().playSquare(220);

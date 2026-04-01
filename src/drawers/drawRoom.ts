@@ -24,7 +24,6 @@ export interface DrawRoomContext {
   setPredictedMoves: (moves: Keyframe[]) => void;
   refreshMatch: () => Promise<void>;
   setRoomTransition: (t: { toRoom: number; direction: number; endTime: number } | null) => void;
-  autoTurnEnding: (isActing: boolean, isMoving: boolean) => Promise<boolean>;
   onChestClick: (chestId: number) => void;
   chestOffsetMap: Record<number, number>;
 }
@@ -33,7 +32,7 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
   const {
     globals, roomProps, offsetMap, match, account, builderOffset, BUILDER_ID,
     isMatchStarted, times, predictedStatsRef, predictedMovesRef, predictedLocationRef,
-    setPredictedMoves, refreshMatch, setRoomTransition, autoTurnEnding, onChestClick, chestOffsetMap,
+    setPredictedMoves, refreshMatch, setRoomTransition, onChestClick, chestOffsetMap,
   } = ctx;
 
   const glyphs = globals.glyphs;
@@ -232,8 +231,10 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
   function setClickableLock(drawX: number, drawY: number, direction: number) {
     if (!isMatchStarted) return;
     markRegionClickable(glyphs, drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
-      await autoTurnEnding(true, false);
-      const moveBody = { account, character: builderOffset, room: roomId, direction };
+      const builderCharacter = match.builders[BUILDER_ID].character;
+      const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+      predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+      const moveBody = { account, character: builderOffset, room: roomId, direction, isForcedTurnEnd };
       const stringifiedBody = JSON.stringify(moveBody);
       getSynth().playSquare(220);
       fetch(`${API_BASE}/api/match/${match.filename}/activate_lock`, {
