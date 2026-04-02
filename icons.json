@@ -7,6 +7,8 @@
     "default": [11, 16],
     "sprites": {
         "NIL": [0,13],
+        "COVENANT": [20,19],
+        "SACRAMENT_FORGIVENESS": [12,19],
         "TOGGLER": [0,14],
         "MOUSTACHER": [8,4],
         "SATYR": [0,0],
