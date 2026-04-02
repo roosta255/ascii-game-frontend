@@ -1,4 +1,11 @@
 {
+    "COVENANT_CLOSED": {"renderer": {"type": "DoorRenderer","directions": [
+        { "sprite": "DOOR_GRILLE_NORTH", "palette": 3 },
+        { "sprite": "DOOR_GRILLE_EAST", "palette": 3 },
+        { "sprite": "DOOR_GRILLE_SOUTH", "palette": 3 },
+        { "sprite": "DOOR_GRILLE_WEST", "palette": 3 }]}},
+    "COVENANT_OPEN": { "renderer": { "type": "Unrendered" } },
+
     "ELEVATOR_CLOSED_KEYED": {"renderer": {"type": "DoorRenderer","directions": [
         { "sprite": "DOOR_ELEVATOR_NORTH", "palette": 3 },
         { "sprite": "DOOR_ELEVATOR_EAST", "palette": 3 },
