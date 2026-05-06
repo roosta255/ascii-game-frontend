@@ -127,22 +127,22 @@ export function isKeyframeDuplicate(source: Keyframe, timeout: number, target: K
 // They are kept separate from movement keyframes so they don't trigger the
 // AnimatedCharacter overlay. data = [from, 0, to, 0].
 
-export function predictedMovesRemaining(base: number, pending: Keyframe[]): number {
-  return base - pending.filter(k => k.animation === 'MOVE_DECREMENT').length;
+export function predictedMovesRemaining(base: number, pending: Keyframe[], since: number): number {
+  return Math.max(0, base - pending.filter(k => k.animation === 'MOVE_DECREMENT' && k.t0 >= since).length);
 }
 
-export function predictedActionsRemaining(base: number, pending: Keyframe[]): number {
-  return base - pending.filter(k => k.animation === 'ACTION_DECREMENT').length;
+export function predictedActionsRemaining(base: number, pending: Keyframe[], since: number): number {
+  return Math.max(0, base - pending.filter(k => k.animation === 'ACTION_DECREMENT' && k.t0 >= since).length);
 }
 
 export function createMoveDecrementPrediction(baseMoves: number, pending: Keyframe[], times: TimeRef): Keyframe {
-  const from = predictedMovesRemaining(baseMoves, pending);
+  const from = predictedMovesRemaining(baseMoves, pending, times.fetchTime);
   const t = performance.now() - times.serverToClientOffset;
   return { animation: 'MOVE_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, Math.max(0, from - 1)], predicted: true };
 }
 
 export function createActionDecrementPrediction(baseActions: number, pending: Keyframe[], times: TimeRef): Keyframe {
-  const from = predictedActionsRemaining(baseActions, pending);
+  const from = predictedActionsRemaining(baseActions, pending, times.fetchTime);
   const t = performance.now() - times.serverToClientOffset;
   return { animation: 'ACTION_DECREMENT', t0: t, t1: t + 1100, room0: -1, data: [from, Math.max(0, from - 1)], predicted: true };
 }

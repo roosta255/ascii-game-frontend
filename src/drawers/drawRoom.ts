@@ -17,7 +17,7 @@ export interface DrawRoomContext {
   builderOffset: number;
   BUILDER_ID: number;
   isMatchStarted: boolean;
-  times: { serverToClientOffset: number };
+  times: { serverToClientOffset: number; fetchTime: number };
   predictedStatsRef: { current: Keyframe[] };
   predictedMovesRef: { current: Keyframe[] };
   predictedLocationRef: { current: { type: string; data: number; t1: number } | null };
@@ -52,7 +52,7 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
     const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
       try {
         const builderCharacter = match.builders[BUILDER_ID].character;
-        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
         predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
         debugKeyframes(`character click → predicted stats`, predictedStatsRef.current);
         debugKeyframes(`character click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
@@ -105,7 +105,7 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
           ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
           : builderCharacter;
         const movePrediction = createMovePrediction(roomId, floor, undefined, sourceCharacter, match, times, activePredictedLoc?.t1);
-        const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+        const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current, times.fetchTime) === 0;
         if (movePrediction.length > 0) {
           predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
           predictedLocationRef.current = { type: 'FLOOR', data: floor, t1: movePrediction[0].t1 };
@@ -178,7 +178,7 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
         ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
         : builderCharacter;
       const movePrediction = createMovePrediction(roomId, undefined, direction, sourceCharacter, match, times, activePredictedLoc?.t1);
-      const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+      const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current, times.fetchTime) === 0;
       if (movePrediction.length > 0) {
         predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
         predictedLocationRef.current = { type: 'DOOR', data: direction, t1: movePrediction[0].t1 };
@@ -232,7 +232,7 @@ export function drawRoomAt(roomX: number, roomY: number, room: any, roomId: numb
     if (!isMatchStarted) return;
     markRegionClickable(glyphs, drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
       const builderCharacter = match.builders[BUILDER_ID].character;
-      const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+      const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
       predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
       const moveBody = { account, character: builderOffset, room: roomId, direction, isForcedTurnEnd };
       const stringifiedBody = JSON.stringify(moveBody);

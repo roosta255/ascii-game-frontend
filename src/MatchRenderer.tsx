@@ -611,7 +611,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       predictedMovesRef.current = newPredictions;
       setPredictedMoves(newPredictions);
     }
-    const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+    const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
     predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
     const moveBody: any = { account, character: builderOffset, room: viewedRoomId, direction, isForcedTurnEnd };
     if (itemIndex !== undefined) moveBody.item = itemIndex;
@@ -664,7 +664,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
         try {
           const builderCharacter = match.builders[BUILDER_ID].character;
-          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
           debugKeyframes(`character click → predicted stats`, predictedStatsRef.current);
           debugKeyframes(`character click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
@@ -721,7 +721,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
             : builderCharacter;
           const movePrediction = createMovePrediction(roomId, floor, undefined, sourceCharacter, match, times, activePredictedLoc?.t1);
-          const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+          const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           if (movePrediction.length > 0) {
             predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
             predictedLocationRef.current = { type: 'FLOOR', data: floor, t1: movePrediction[0].t1 };
@@ -815,7 +815,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           ? { ...builderCharacter, location: { type: activePredictedLoc.type, data: activePredictedLoc.data } }
           : builderCharacter;
         const movePrediction = createMovePrediction(roomId, undefined, direction, sourceCharacter, match, times, activePredictedLoc?.t1);
-        const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current) === 0;
+        const isForcedTurnEnd = predictedMovesRemaining(builderCharacter.movesRemaining, predictedStatsRef.current, times.fetchTime) === 0;
         if (movePrediction.length > 0) {
           predictedStatsRef.current = [...predictedStatsRef.current, createMoveDecrementPrediction(builderCharacter.movesRemaining, predictedStatsRef.current, times)];
           predictedLocationRef.current = { type: 'DOOR', data: direction, t1: movePrediction[0].t1 };
@@ -1085,7 +1085,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         try {
           getSynth().playSquare(220);
           const builderCharacter = match.builders[BUILDER_ID].character;
-          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
           const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index, isForcedTurnEnd };
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_inventory_item`, {

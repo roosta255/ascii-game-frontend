@@ -80,7 +80,7 @@ export default function MatchPage() {
     let isMounted = true;
 
     async function fetchUpdates() {
-      if (pendingRequests.current >= 5) return;
+      if (pendingRequests.current >= 3) return;
       pendingRequests.current++;
       try {
         const res = await fetch(`${API_BASE}/api/match/${id}`);

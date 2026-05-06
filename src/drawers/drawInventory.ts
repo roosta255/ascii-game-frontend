@@ -12,7 +12,7 @@ export interface DrawInventoryProps {
   builderOffset: number;
   BUILDER_ID: number;
   predictedStatsRef: { current: Keyframe[] };
-  times: { serverToClientOffset: number };
+  times: { serverToClientOffset: number; fetchTime: number };
   refreshMatch: () => Promise<void>;
 }
 
@@ -36,7 +36,7 @@ export function drawInventoryAt(
       try {
         getSynth().playSquare(220);
         const builderCharacter = match.builders[BUILDER_ID].character;
-        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
         predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
         const activateBody = { account, room: viewedRoomId, character: builderOffset, item: item.index, isForcedTurnEnd };
         const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_inventory_item`, {

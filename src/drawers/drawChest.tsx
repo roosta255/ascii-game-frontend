@@ -16,7 +16,7 @@ export interface DrawChestProps {
   builderOffset: number;
   BUILDER_ID: number;
   predictedStatsRef: { current: Keyframe[] };
-  times: { serverToClientOffset: number };
+  times: { serverToClientOffset: number; fetchTime: number };
   refreshMatch: () => Promise<void>;
   animationFlyweights: Record<string, AnimationFlyweight>;
   animationTime: number;
@@ -64,7 +64,7 @@ export function drawChestAt(
       try {
         getSynth().playSquare(220);
         const builderCharacter = match.builders[BUILDER_ID].character;
-        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+        const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
         predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
         const body = { action: 'USE_CHEST_LOCK', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, isForcedTurnEnd };
         const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
@@ -101,7 +101,7 @@ export function drawChestAt(
         try {
           getSynth().playSquare(220);
           const builderCharacter = match.builders[BUILDER_ID].character;
-          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+          const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
           const body = { action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, target_item: capturedIndex, target_inventory: chest.inventory?.inventoryId, isForcedTurnEnd };
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
@@ -131,7 +131,7 @@ export function drawChestAt(
             try {
               getSynth().playSquare(220);
               const builderCharacter = match.builders[BUILDER_ID].character;
-              const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current) === 0;
+              const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
               predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
               const body = { action: 'CRITTER_BITE', account, room: viewedRoomId, character: critterId, target: builderOffset, isForcedTurnEnd };
               const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
