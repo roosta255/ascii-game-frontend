@@ -2,6 +2,7 @@
     "COVENANT_OPEN": { "renderer": { "type": "SpriteRenderer", "sprite": "COVENANT", "palette": 21 } },
     "COVENANT_CLOSED": { "renderer": { "type": "SpriteRenderer", "sprite": "COVENANT", "palette": 0 } },
     "ELEVATOR_CLOSED_KEYED": { "renderer": { "type": "Unrendered" } },
+    "EXIT": { "renderer": { "type": "Unrendered" } },
     "ELEVATOR_CLOSED_KEYED_BUTTON": {"renderer": {"type": "DoorRenderer","directions": [
         { "sprite": "LOCK_ELEVATOR_KEYED_NORTH", "palette": 3 },
         { "sprite": "NIL", "palette": 3 },

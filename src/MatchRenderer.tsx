@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getSynth } from "./audio/index";
 import { blockToText } from "./functions/blockToText";
 import { Texture } from "./assets/Texture";
@@ -68,8 +69,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const isMobile = useIsMobile();
   const [showInventory, setShowInventory] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
-  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character' | 'chest' | 'log'>('inventory');
+  const [rightPanelMode, setRightPanelMode] = useState<'inventory' | 'character' | 'chest' | 'log' | 'match'>('inventory');
   const [showEventLog, setShowEventLog] = useState(false);
+  const [showMatch, setShowMatch] = useState(false);
+  const navigate = useNavigate();
   const [selectedChestId, setSelectedChestId] = useState<number | null>(null);
   const [sheetPage, setSheetPage] = useState('attributes');
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
@@ -287,7 +290,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       backgrounds: backgroundPainter,
       doorways: doorwayPainter,
     },
-    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : isMobile && showEventLog ? 42 + computeEventLogRows(room.eventLog ?? [], eventToSentence, EVENT_LOG_CAPACITY) : 42),
+    glyphs: createBlankCanvas(!isMobile && rightPanelMode === 'chest' ? 112 : 80, isMobile && selectedChestId != null ? 91 : isMobile && showInventory ? 70 : isMobile && showCharacter ? 67 : isMobile && showEventLog ? 42 + computeEventLogRows(room.eventLog ?? [], eventToSentence, EVENT_LOG_CAPACITY) : isMobile && showMatch ? 52 : 42),
     animatedExtras: [],
   };
 
@@ -370,6 +373,26 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
 
   function formatTrait(name: string): string {
     return name.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function builderHasTrait(traitName: string): boolean {
+    const sheet = match.builders[BUILDER_ID].character?.sheet;
+    if (!sheet) return false;
+    for (const page of Object.values(sheet) as any[][]) {
+      for (const t of page) {
+        if (t.trait === traitName && t.isPresent) return true;
+      }
+    }
+    return false;
+  }
+
+  async function leaveMatch() {
+    const res = await fetch(`${API_BASE}/api/match/${match.filename}/leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account }),
+    });
+    if (res.ok) navigate('/');
   }
 
   function resolveLabel(name: string, typename: string): string {
@@ -601,6 +624,38 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       // Blank line between entries
       row++;
     }
+  }
+
+  function drawMatchPanelAt(offset: [number, number]) {
+    const [ox, oy] = offset;
+    const BG = 0x000000;
+
+    const hasExited = builderHasTrait('EXITED_DUNGEON');
+    const isDead = builderHasTrait('IS_DEAD');
+    const isMangled = builderHasTrait('IS_MANGLED');
+
+    let buttonLabel: string;
+    let statusText: string;
+    let statusFg: number;
+    if (hasExited) {
+      buttonLabel = 'ACCEPT VICTORY';
+      statusText = 'You have escaped the dungeon.';
+      statusFg = 0x88bb88;
+    } else if (isDead || isMangled) {
+      buttonLabel = 'ACCEPT DEFEAT';
+      statusText = 'Your character has fallen.';
+      statusFg = 0xbb8888;
+    } else {
+      buttonLabel = 'ABANDON MATCH';
+      statusText = 'Leave the match at any time.';
+      statusFg = 0x888888;
+    }
+
+    writeText(ox, oy, 'MATCH', 0x888888, BG);
+    writeText(ox, oy + 1, '─'.repeat(39), 0x444444, BG);
+    writeText(ox, oy + 3, statusText, statusFg, BG);
+    const btn = '[ ' + buttonLabel + ' ]';
+    writeText(ox, oy + 5, btn, statusFg, BG, () => { leaveMatch(); });
   }
 
   async function activateLock(direction: number, itemIndex?: number) {
@@ -1186,6 +1241,17 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     } else {
       writeText(61, 1, 'LOG', 0x555555, 0x000000, () => setRightPanelMode('log'));
     }
+    const matchActive = rightPanelMode === 'match';
+    if (matchActive) {
+      for (let bx = 64; bx <= 70; bx++) {
+        if (globals.glyphs[0]?.[bx]) globals.glyphs[0][bx] = { char: '\u2584', fg: PANEL_HL, bg: 0x000000 };
+      }
+      if (globals.glyphs[1]?.[64]) globals.glyphs[1][64] = { char: '\u2590', fg: PANEL_HL, bg: 0x000000 };
+      writeText(65, 1, 'MATCH', 0x000000, PANEL_HL, () => setRightPanelMode('match'));
+      if (globals.glyphs[1]?.[70]) globals.glyphs[1][70] = { char: '\u258c', fg: PANEL_HL, bg: 0x000000 };
+    } else {
+      writeText(65, 1, 'MATCH', 0x555555, 0x000000, () => setRightPanelMode('match'));
+    }
     const chest = selectedChestId != null ? (match.dungeon.chests ?? [])[selectedChestId] : null;
     if (rightPanelMode === 'chest' && chest) {
       drawInventoryAt([41, 13]);
@@ -1194,6 +1260,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       drawInventoryAt([41, 13]);
     } else if (rightPanelMode === 'log') {
       drawEventLogAt([41, 3], requestErrorLog);
+    } else if (rightPanelMode === 'match') {
+      drawMatchPanelAt([41, 3]);
     } else {
       drawCharacterSheetAt([41, 3]);
     }
@@ -1207,6 +1275,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     drawCharacterSheetAt([0, 41]);
   } else if (showEventLog) {
     drawEventLogAt([0, 42], requestErrorLog);
+  } else if (showMatch) {
+    drawMatchPanelAt([0, 43]);
   }
 
 
@@ -1246,8 +1316,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowCharacter(v => !v); setShowInventory(false); setShowEventLog(false); setSelectedChestId(null); }}>
           {showCharacter ? "Close Character" : "Character"}
         </button>
-        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowEventLog(v => !v); setShowInventory(false); setShowCharacter(false); setSelectedChestId(null); }}>
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowEventLog(v => !v); setShowInventory(false); setShowCharacter(false); setShowMatch(false); setSelectedChestId(null); }}>
           {showEventLog ? "Close Log" : "Log"}
+        </button>
+        <button style={{ padding: "0.75rem 1rem" }} onClick={() => { setShowMatch(v => !v); setShowInventory(false); setShowCharacter(false); setShowEventLog(false); setSelectedChestId(null); }}>
+          {showMatch ? "Close Match" : "Match"}
         </button>
       </div>
     )}
