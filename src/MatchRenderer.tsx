@@ -6,7 +6,7 @@ import { Texture } from "./assets/Texture";
 import { SpritesheetPainter } from "./assets/SpritesheetPainter";
 import { Painter, FlyweightEntry, AnimationFlyweight } from "./assets/Painter";
 import { decorateFlyweights } from "./assets/flyweightLabels";
-import { AnimatedCharacter } from "./types/AnimatedCharacter";
+import { AnimatedCharacter, StatusEffectConfig } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
@@ -62,6 +62,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [renderTime, setRenderTime] = useState<number>(0);
   const [flyweights, setFlyweights] = useState<{ roles: FlyweightEntry[]; doors: FlyweightEntry[]; locks: FlyweightEntry[]; items: FlyweightEntry[]; animations: AnimationFlyweight[]; } | null>(null);
   const [lockRules, setLockRules] = useState<any[] | null>(null);
+  const [statusEffectConfig, setStatusEffectConfig] = useState<StatusEffectConfig | null>(null);
 
   const cellSize = useRef<CellSize | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
@@ -194,6 +195,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       .then(raw => decorateFlyweights(raw, import.meta.env.BASE_URL))
       .then(setFlyweights)
       .catch(err => console.error("❌ Failed to load flyweights:", err));
+
+    fetch(`${import.meta.env.BASE_URL}status-effect-animations.json`)
+      .then(res => res.json())
+      .then(setStatusEffectConfig)
+      .catch(err => console.error("❌ Failed to load status-effect-animations.json:", err));
 
     fetch(`${API_BASE}/api/flyweights/rules`)
       .then(res => res.json())
@@ -692,9 +698,12 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function drawCharacterAt(drawX: number, drawY: number, cell: any) {
       const character = cell.offset && offsetMap[cell.offset];
       if (!character) return;
-      // animations check
 
-      if (character.keyframes.find((k:Keyframe) => isKeyframeAnimating(k, performance.now() - times.serverToClientOffset)) !== undefined) {
+      const traits: string[] = character.traitsComputed ?? [];
+      const hasAnimation = character.keyframes.find((k: Keyframe) => isKeyframeAnimating(k, animationTime)) !== undefined;
+      const hasStatusEffect = statusEffectConfig != null && traits.some((t: string) => t in statusEffectConfig);
+
+      if (hasAnimation || hasStatusEffect) {
         globals.animatedExtras.push(
           <AnimatedCharacter
             key={`character-${character.offset}`}
@@ -707,6 +716,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             globals={rebuildGlyphs(globals, 5, 4)}
             room={roomProps}
             fallbackPosition={[drawX, drawY]}
+            traitsComputed={traits}
+            statusEffectConfig={statusEffectConfig ?? undefined}
           />
         );
         return;

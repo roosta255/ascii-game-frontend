@@ -10,7 +10,7 @@ export interface DirectionalIconRendererEntry {
 export type Renderer =
     | { type: "Unrendered" }
     | { type: "BackgroundRenderer"; sprite: string; palette: number }
-    | { type: "CharacterRenderer"; sprite: string; palette: number }
+    | { type: "CharacterRenderer"; sprite: string; palette: number; eyes?: number }
     | { type: "DirectionalIconRenderer"; directions: DirectionalIconRendererEntry[] }
     | { type: "DoorwayRenderer"; sprite: string }
     | { type: "SpriteRenderer"; sprite: string; palette: number };
@@ -22,6 +22,8 @@ export interface RenderContext {
         direction?: number;
         onClick?: () => void;
         room?: any;
+        /** Overrides the renderer's own eyes palette index for IS_EYE_COLOR status effects. */
+        eyePaletteOverride?: number;
     };
 }
 
@@ -40,9 +42,9 @@ const rendererHandlers: Record<string, RendererHandler> = {
     },
 
     "CharacterRenderer": (renderer, ctx) => {
-        const r = renderer as any;
-        // console.log("Rendering: ", r, ctx);
-        ctx.globals.textures.icons.draw(ctx.globals.glyphs, r.sprite, ctx.locals.coords[0], ctx.locals.coords[1], r.palette, ctx.locals.onClick);
+        const r = renderer as { type: "CharacterRenderer"; sprite: string; palette: number; eyes?: number };
+        const eyePalette = ctx.locals.eyePaletteOverride ?? r.eyes;
+        ctx.globals.textures.icons.draw(ctx.globals.glyphs, r.sprite, ctx.locals.coords[0], ctx.locals.coords[1], r.palette, ctx.locals.onClick, eyePalette);
     },
 
     "SpriteRenderer": (renderer, ctx) => {
@@ -110,7 +112,7 @@ export function parseRenderer(raw: any): Renderer {
         case "DoorwayRenderer":
             return { type: "DoorwayRenderer", sprite: raw.renderer.sprite };
         case "CharacterRenderer":
-            return { type: "CharacterRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
+            return { type: "CharacterRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette, eyes: raw.renderer.eyes };
         case "SpriteRenderer":
             return { type: "SpriteRenderer", sprite: raw.renderer.sprite, palette: raw.renderer.palette };
         default:

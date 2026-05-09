@@ -13,6 +13,8 @@ export interface AnimationFlyweight {
     name: string;
     isTransition: boolean;
     isGlyphing: boolean;
+    isOverlay: boolean;
+    isEyeColor: boolean;
 }
 
 // Textures map names -> Sprites

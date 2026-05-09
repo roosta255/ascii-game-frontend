@@ -1,6 +1,10 @@
 // texture.ts — Handles sprite extraction and rendering from a texture atlas
 import { AsciiGlyph, getColor, isTransparent } from "../types/AsciiGlyph";
 
+/** Pixels with fg or bg matching this color are treated as eye pixels and routed
+ *  through the eyePalette instead of the skin palette when eyePalette is provided. */
+export const EYE_SENTINEL = 0x00FF00;
+
 interface SpriteMeta {
   offset: [number, number];
   isHorizontalFlip: boolean;
@@ -88,7 +92,7 @@ export class Texture {
     };
   }
 
-  draw(target: AsciiGlyph[][], spriteName: string, targetX: number, targetY: number, palette: number, onClick?: () => void): void {
+  draw(target: AsciiGlyph[][], spriteName: string, targetX: number, targetY: number, palette: number, onClick?: () => void, eyePalette?: number): void {
     const spriteRequested = this.sprites[spriteName];
 
     const [width, height] = this.meta.size;
@@ -111,9 +115,12 @@ export class Texture {
         if (isTransparent(before)) {
           continue;
         }
+        const resolvedEyePalette = (eyePalette != null && this.palettes[eyePalette]) ? eyePalette : palette;
+        const fgPal = (eyePalette != null && before.fg === EYE_SENTINEL) ? resolvedEyePalette : palette;
+        const bgPal = (eyePalette != null && before.bg === EYE_SENTINEL) ? resolvedEyePalette : palette;
         const glyph = {
-          bg: this.palettes[palette][before.bg] ?? before.bg,
-          fg: this.palettes[palette][before.fg] ?? before.fg,
+          bg: this.palettes[bgPal][before.bg] ?? before.bg,
+          fg: this.palettes[fgPal][before.fg] ?? before.fg,
           char: before.char,
           onClick,
         };
