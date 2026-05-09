@@ -55,7 +55,7 @@
         "renderer": {
             "type": "CharacterRenderer",
             "palette": 3,
-            "eyes": 3,
+            "eyes": 14,
             "sprite": "SATYR",
             "bleedable": false,
             "sleepable": false
