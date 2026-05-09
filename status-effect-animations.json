@@ -1,0 +1,13 @@
+{
+    "SLEEP":   { "loopSprite": "SLEEP_LOOP",   "loopAudio": null },
+    "ENCHAIN": { "loopSprite": "ENCHAIN_LOOP", "loopAudio": null },
+    "ENCAGE":  { "loopSprite": "ENCAGE_LOOP",  "loopAudio": null },
+    "CONFUSE": { "loopSprite": "CONFUSE_LOOP", "loopAudio": null },
+    "EXCITE":  { "loopSprite": "EXCITE_LOOP",  "loopAudio": null },
+    "ENRAGE":  { "loopSprite": "ENRAGE_LOOP",  "loopAudio": null },
+    "FROZEN":  { "loopSprite": "FROZEN_LOOP",  "loopAudio": null },
+    "ENFLAME": { "loopSprite": "ENFLAME_LOOP", "loopAudio": null },
+    "PIETY":   { "eyePalette": 17 },
+    "MAGICAL": { "eyePalette": 3  },
+    "UNHOLY":  { "eyePalette": 6  }
+}
