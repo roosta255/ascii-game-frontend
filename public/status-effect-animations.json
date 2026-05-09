@@ -7,7 +7,7 @@
     "ENRAGE":  { "loopSprite": "ENRAGE_LOOP",  "loopAudio": null },
     "FROZEN":  { "loopSprite": "FROZEN_LOOP",  "loopAudio": null },
     "ENFLAME": { "loopSprite": "ENFLAME_LOOP", "loopAudio": null },
-    "PIETY":   { "eyePalette": 17 },
+    "PIETY":   { "eyePalette": 2 },
     "MAGICAL": { "eyePalette": 3  },
-    "UNHOLY":  { "eyePalette": 6  }
+    "UNHOLY":  { "eyePalette": 5  }
 }
