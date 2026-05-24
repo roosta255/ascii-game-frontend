@@ -23,43 +23,45 @@ export interface DrawChestProps {
   roomProps: RoomProps;
   isLocallyAnimating: (k: Keyframe) => boolean;
   entityLocalAnimTime: (keyframes: Keyframe[]) => number | undefined;
+  isMatchStarted: boolean;
 }
 
 const CHEST_ITEMS_WIDE = 3;
-const CHEST_LOCK_OFFSET: [number, number] = [15, 7];
+const CHEST_LOCK_OFFSET: [number, number] = [15, 4];
 const CELL_SIZE_X = 5;
 const CELL_SIZE_Y = 4;
 
 export function drawChestAt(
   offset: [number, number],
-  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime }: DrawChestProps,
+  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime, isMatchStarted }: DrawChestProps,
 ) {
   const spriteName = chest.isLocked ? 'CHEST_6_LOCKED' : 'CHEST_6_UNLOCKED';
   globals.textures.minimap.draw(globals.glyphs, spriteName, offset[0], offset[1], 0);
 
   const containerCharacterId = chest.containerCharacterId;
 
-  if (chest.isLocked) {
-    const lockDrawX = offset[0] + CHEST_LOCK_OFFSET[0];
-    const lockDrawY = offset[1] + CHEST_LOCK_OFFSET[1];
-    if (chest.lock?.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
-      globals.animatedExtras.push(
-        <AnimatedCharacter
-          key={`chest-lock-${containerCharacterId}`}
-          keyframes={chest.lock.keyframes}
-          painter={globals.painters.chestLocks!}
-          name={chest.lock.type}
-          animationFlyweights={animationFlyweights}
-          animationTime={animationTime}
-          localAnimationTime={entityLocalAnimTime(chest.lock.keyframes)}
-          position={[lockDrawX, lockDrawY]}
-          globals={rebuildGlyphs(globals, CELL_SIZE_X, CELL_SIZE_Y)}
-          room={roomProps}
-        />
-      );
-    } else {
-      globals.painters.chestLocks.draw(chest.lock, { globals, locals: { coords: [lockDrawX, lockDrawY], direction: 0 } });
-    }
+  const lockDrawX = offset[0] + CHEST_LOCK_OFFSET[0];
+  const lockDrawY = offset[1] + CHEST_LOCK_OFFSET[1];
+  if (chest.lock?.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
+    globals.animatedExtras.push(
+      <AnimatedCharacter
+        key={`chest-lock-${containerCharacterId}`}
+        keyframes={chest.lock.keyframes}
+        painter={globals.painters.chestLocks!}
+        name={chest.lock.type}
+        animationFlyweights={animationFlyweights}
+        animationTime={animationTime}
+        localAnimationTime={entityLocalAnimTime(chest.lock.keyframes)}
+        position={[lockDrawX, lockDrawY]}
+        globals={rebuildGlyphs(globals, CELL_SIZE_X, CELL_SIZE_Y)}
+        room={roomProps}
+      />
+    );
+  } else {
+    globals.painters.chestLocks.draw(chest.lock, { globals, locals: { coords: [lockDrawX, lockDrawY], direction: 0 } });
+  }
+  if (chest.isLockActionable)
+  {
     markRegionClickable(globals.glyphs, lockDrawX, lockDrawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
       try {
         getSynth().playSquare(220);
@@ -76,7 +78,7 @@ export function drawChestAt(
           console.error('Failed to use chest lock:', await response.text());
           predictedStatsRef.current = [];
         } else {
-          console.log('✅ Chest lock activated');
+          console.log('✅ Chest lock used');
           await refreshMatch();
           predictedStatsRef.current = [];
         }
@@ -85,10 +87,13 @@ export function drawChestAt(
         predictedStatsRef.current = [];
       }
     });
-  } else {
+  }
+  
+
+  if (!chest.isLocked) {
     const itemGrid: GridCalculator = {
       position: offset,
-      offset: [9, 3],
+      offset: [9, 9],
       stride: [6, 6],
     };
 
@@ -153,6 +158,40 @@ export function drawChestAt(
             }
           };
           globals.painters.roles.draw(critter.role, { globals, locals: { coords: itemDraw, onClick: onCritterClick } });
+        }
+      } else if (item.type === 'CONTAINED') {
+        const containedId = item.stacks;
+        const allChars = [...(match.dungeon?.characters ?? []), ...(match.builders?.map((b: any) => b.character) ?? [])];
+        const contained = allChars.find((c: any) => c.characterId === containedId);
+        if (contained) {
+          const onContainedClick = (!contained.isActionable || !isMatchStarted) ? undefined : async () => {
+            try {
+              getSynth().playSquare(220);
+              const builderCharacter = match.builders[BUILDER_ID].character;
+              const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
+              predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+              const target = contained.isObject ? builderOffset : containedId;
+              const activator = contained.isObject ? containedId : builderOffset;
+              const body = { account, room: viewedRoomId, character: activator, target, isForcedTurnEnd };
+              const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_character`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              });
+              if (!response.ok) {
+                console.error('Failed to activate contained character:', await response.text());
+                predictedStatsRef.current = [];
+              } else {
+                console.log('✅ Contained character activated');
+                await refreshMatch();
+                predictedStatsRef.current = [];
+              }
+            } catch (error) {
+              console.error('Error activating contained character:', error);
+              predictedStatsRef.current = [];
+            }
+          };
+          globals.painters.roles.draw(contained.role, { globals, locals: { coords: itemDraw, onClick: onContainedClick } });
         }
       } else {
         globals.painters.items.draw(item.type, { globals, locals: { coords: itemDraw, onClick } });

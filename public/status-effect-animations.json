@@ -1,13 +1,13 @@
 {
-    "SLEEP":   { "loopSprite": "SLEEP_LOOP",   "loopAudio": null },
-    "ENCHAIN": { "loopSprite": "ENCHAIN_LOOP", "loopAudio": null },
-    "ENCAGE":  { "loopSprite": "ENCAGE_LOOP",  "loopAudio": null },
-    "CONFUSE": { "loopSprite": "CONFUSE_LOOP", "loopAudio": null },
-    "EXCITE":  { "loopSprite": "EXCITE_LOOP",  "loopAudio": null },
-    "ENRAGE":  { "loopSprite": "ENRAGE_LOOP",  "loopAudio": null },
-    "FROZEN":  { "loopSprite": "FROZEN_LOOP",  "loopAudio": null },
-    "ENFLAME": { "loopSprite": "ENFLAME_LOOP", "loopAudio": null },
-    "PIETY":   { "eyePalette": 2 },
-    "MAGICAL": { "eyePalette": 3  },
-    "UNHOLY":  { "eyePalette": 5  }
+    "SLEEP":   { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "SLEEP_LOOP",   "looping": true, "palette": 1 } },
+    "ENCHAIN": { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENCHAIN_LOOP", "looping": true, "palette": 1 } },
+    "ENCAGE":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENCAGE_LOOP",  "looping": true, "palette": 1 } },
+    "CONFUSE": { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "CONFUSE_LOOP", "looping": true, "palette": 1 } },
+    "EXCITE":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "EXCITE_LOOP",  "looping": true, "palette": 1 } },
+    "ENRAGE":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENRAGE_LOOP",  "looping": true, "palette": 1 } },
+    "FROZEN":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "FROZEN_LOOP",  "looping": true, "palette": 1 } },
+    "ENFLAME": { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENFLAME_LOOP", "looping": true, "palette": 1 } },
+    "PIETY":   { "renderer": { "type": "EyePaletteRenderer", "palette": 2 } },
+    "MAGICAL": { "renderer": { "type": "EyePaletteRenderer", "palette": 3 } },
+    "UNHOLY":  { "renderer": { "type": "EyePaletteRenderer", "palette": 5 } }
 }

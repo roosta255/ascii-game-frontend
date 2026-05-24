@@ -4,16 +4,7 @@ import { digestKeyframes, isKeyframeAnimating, Keyframe } from "./Keyframe";
 import { DrawerProps } from "../types/DrawerProps";
 import { RoomProps } from "../types/RoomProps";
 import { Painter, AnimationFlyweight } from "../assets/Painter";
-
-export interface StatusEffectDef {
-    /** Animation name in the spritesheet to loop indefinitely while trait is active. */
-    loopSprite?: string;
-    loopAudio?: string | null;
-    /** Palette index to apply to eye-sentinel pixels while this trait is active. */
-    eyePalette?: number;
-}
-
-export type StatusEffectConfig = Record<string, StatusEffectDef>;
+import { render } from "../assets/Renderer";
 
 export interface AnimatedCharacterProps {
     /** The keyframes to animate — caller selects the correct list (e.g. wall.keyframes vs wall.lockKeyframes). */
@@ -41,11 +32,9 @@ export interface AnimatedCharacterProps {
     room: RoomProps;
     /** Trait names currently active on this character (from backend traitsComputed). */
     traitsComputed?: string[];
-    /** Status effect config loaded from status-effect-animations.json. */
-    statusEffectConfig?: StatusEffectConfig;
+    /** Painter loaded from status-effect-animations.json — drives eye-color and overlay effects. */
+    traitPainter?: Painter;
 }
-
-const OVERLAY_FRAME_DURATION_MS = 200;
 
 /**
  * Resolves whether a status-effect trait is currently active, consulting the keyframe
@@ -70,33 +59,6 @@ export function resolveTraitActive(
     return lastKf.data[1] === 1;
 }
 
-/**
- * Given a status-effect config and the current character state, returns the active
- * eye-palette override (if any) and the list of overlay effect names that should loop.
- *
- * Effect type is determined by the config fields themselves:
- *   eyePalette present → IS_EYE_COLOR effect
- *   loopSprite present → IS_OVERLAY effect
- *
- * This does NOT gate on animationFlyweights.isEyeColor / .isOverlay — those flags
- * represent the same information and are redundant here.
- */
-export function resolveStatusEffects(
-    config: StatusEffectConfig,
-    keyframes: Keyframe[],
-    traitsComputed: string[],
-    t: number,
-): { activeEyePalette: number | undefined; activeOverlayEffects: string[] } {
-    let activeEyePalette: number | undefined;
-    const activeOverlayEffects: string[] = [];
-    for (const [effectName, def] of Object.entries(config)) {
-        if (!resolveTraitActive(effectName, keyframes, traitsComputed, t)) continue;
-        if (def.eyePalette != null) activeEyePalette = def.eyePalette;
-        if (def.loopSprite) activeOverlayEffects.push(effectName);
-    }
-    return { activeEyePalette, activeOverlayEffects };
-}
-
 export function AnimatedCharacter({
   keyframes,
   painter,
@@ -110,14 +72,9 @@ export function AnimatedCharacter({
   globals,
   room,
   traitsComputed,
-  statusEffectConfig,
+  traitPainter,
 }: AnimatedCharacterProps) {
-  // Use localAnimationTime for sprite selection/progress when provided (short non-predicted anims).
-  // Movement/position always uses the server-synced animationTime.
   const spriteTime = localAnimationTime ?? animationTime;
-  // Translation: where to render the character.
-  // Static entities (locks, items, etc.) supply their own position; moving characters
-  // derive it from digestKeyframes.
   const keyframe = digestKeyframes(keyframes, animationTime, room, fallbackPosition);
   const translationProgress = keyframe.t1 > keyframe.t0
     ? (animationTime - keyframe.t0) / (keyframe.t1 - keyframe.t0)
@@ -127,36 +84,48 @@ export function AnimatedCharacter({
   const x = position?.[0] ?? kx;
   const y = position?.[1] ?? ky;
 
-  // Spritesheet dimensions — needed for both animation and overlay rendering.
   const sheet = globals.textures.animationSheet;
   const [fw, fh] = sheet?.meta.size ?? [0, 0];
   const [dox, doy] = sheet?.meta["draw-offset"] ?? [0, 0];
+  const [sw, sh] = globals.textures.icons.meta.size;
   const TRANSPARENT: AsciiGlyph = { char: " ", fg: 0xff00ff, bg: 0xff00ff };
 
-  // Resolve status-effect states against the keyframe timeline.
+  // Frame buffer: animation sheet dimensions when available, icon dimensions otherwise.
+  // The div is always positioned at (x - dox, y - doy), which equals (x, y) when sheet is absent.
+  const frameGlyphs: AsciiGlyph[][] = sheet
+    ? Array.from({ length: fh }, () => Array.from({ length: fw }, () => ({ ...TRANSPARENT })))
+    : Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
+  const frameGlobals: DrawerProps = { ...globals, glyphs: frameGlyphs };
+  const drawCoords: [number, number] = sheet ? [dox, doy] : [0, 0];
+
+  // Resolve active status effects from traitPainter renderers.
   const traits = traitsComputed ?? [];
-  const config = statusEffectConfig ?? {};
+  let activeEyePalette: number | undefined;
+  const activeOverlayEffects: string[] = [];
 
-  const { activeEyePalette, activeOverlayEffects } = resolveStatusEffects(config, keyframes, traits, spriteTime);
-  const activeOverlays = activeOverlayEffects
-    .map(name => ({ effectName: name, def: config[name] }))
-    .filter((entry): entry is { effectName: string; def: StatusEffectDef & { loopSprite: string } } =>
-      entry.def?.loopSprite != null
-    );
+  if (traitPainter) {
+    for (const [effectName, renderer] of Object.entries(traitPainter.renderers)) {
+      if (!resolveTraitActive(effectName, keyframes, traits, spriteTime)) continue;
+      if (renderer.type === "EyePaletteRenderer") {
+        activeEyePalette = renderer.palette;
+      } else if (renderer.type === "AnimatedSpriteRenderer") {
+        activeOverlayEffects.push(effectName);
+      }
+    }
+  }
 
-  // Build overlay divs for all active IS_OVERLAY traits.
   function buildOverlayDivs() {
-    if (!sheet || activeOverlays.length === 0) return [];
-    return activeOverlays.flatMap(({ effectName, def }) => {
-      const loopSprite = def.loopSprite!;
-      const animDef = sheet.meta.spritesheet[loopSprite];
-      if (!animDef) return [];
-      const frameCount = animDef.length;
-      const loopFrame = Math.floor((animationTime % (frameCount * OVERLAY_FRAME_DURATION_MS)) / OVERLAY_FRAME_DURATION_MS);
+    if (!sheet || activeOverlayEffects.length === 0) return [];
+    return activeOverlayEffects.flatMap(effectName => {
+      const renderer = traitPainter!.renderers[effectName];
+      if (renderer.type !== "AnimatedSpriteRenderer") return [];
       const overlayGlyphs: AsciiGlyph[][] = Array.from({ length: fh }, () =>
         Array.from({ length: fw }, () => ({ ...TRANSPARENT }))
       );
-      sheet.drawFrame(overlayGlyphs, loopSprite, loopFrame, null, null, dox, doy, animDef.palette[0] ?? 0);
+      render(renderer, {
+        globals: { ...globals, glyphs: overlayGlyphs },
+        locals: { coords: [dox, doy], animationTime },
+      });
       return [(
         <div
           key={`overlay-${effectName}`}
@@ -169,7 +138,6 @@ export function AnimatedCharacter({
     });
   }
 
-  // Glyphing: find the active keyframe whose animation exists in the spritesheet.
   const activeKeyframe = keyframes.find(k =>
     k.room0 === room.index &&
     isKeyframeAnimating(k, spriteTime) &&
@@ -177,46 +145,35 @@ export function AnimatedCharacter({
   );
   const flyweight = activeKeyframe ? (animationFlyweights[activeKeyframe.animation] ?? null) : null;
 
-  // No active spritesheet animation: fall back to static painter render.
-  // Only skip if the entity is Unrendered — `name` is safe to use here since no transition is active.
   if (!activeKeyframe) {
     if (painter.renderers[name]?.type === "Unrendered") {
-      return null;
+      const overlayDivs = buildOverlayDivs();
+      if (overlayDivs.length === 0) return null;
+      return <>{overlayDivs}</>;
     }
-    painter.draw(name, { globals, locals: { coords: [0, 0], direction: 0, eyePaletteOverride: activeEyePalette } });
+    painter.draw(name, { globals: frameGlobals, locals: { coords: drawCoords, direction: 0, eyePaletteOverride: activeEyePalette } });
     const overlayDivs = buildOverlayDivs();
     const characterDiv = (
-      <div className="animated-character" style={{ position: "absolute", left: `${x}ch`, top: `${y}em`, pointerEvents: "none" }}>
-        {blockToText(globals.glyphs)}
+      <div className="animated-character" style={{ position: "absolute", left: `${x - dox}ch`, top: `${y - doy}em`, pointerEvents: "none" }}>
+        {blockToText(frameGlyphs)}
       </div>
     );
     if (overlayDivs.length === 0) return characterDiv;
     return <>{characterDiv}{overlayDivs}</>;
   }
 
-  const frameGlyphs: AsciiGlyph[][] = Array.from({ length: fh }, () =>
-    Array.from({ length: fw }, () => ({ ...TRANSPARENT }))
-  );
-
   const animName = activeKeyframe.animation;
-  // console.log(`role: ${name}, animation: ${animName}`);
-  const animDef = sheet!.meta.spritesheet[animName];
-  const frameCount = animDef?.length ?? 1;
   const glyphProgress = activeKeyframe.t1 > activeKeyframe.t0
     ? Math.max(0, Math.min(1, (spriteTime - activeKeyframe.t0) / (activeKeyframe.t1 - activeKeyframe.t0)))
     : 0;
-  const frameIndex = Math.min(Math.floor(glyphProgress * frameCount), frameCount - 1);
 
   let beforeGlyphs: AsciiGlyph[][] | null = null;
   let afterGlyphs: AsciiGlyph[][] | null = null;
 
   if (flyweight?.isTransition) {
-    // const tp = transitionPainter ?? painter;
     const tp = painter;
     const beforeName = tp.indexMap[activeKeyframe.data[0]];
     const afterName = tp.indexMap[activeKeyframe.data[1]];
-    // Only drop if the indexMap is populated — an empty indexMap means flyweights haven't
-    // been applied yet (React effect timing), not that the sprites are absent.
     if (Object.keys(tp.indexMap).length > 0) {
       const beforeRenderer = beforeName ? tp.getRenderer(beforeName) : null;
       const afterRenderer = afterName ? tp.getRenderer(afterName) : null;
@@ -225,7 +182,6 @@ export function AnimatedCharacter({
         return null;
       }
     }
-    const [sw, sh] = globals.textures.icons.meta.size;
     const makeBuffer = (): AsciiGlyph[][] =>
       Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
     if (beforeName && activeKeyframe.data[0] !== 0) {
@@ -237,7 +193,6 @@ export function AnimatedCharacter({
       tp.draw(afterName, { globals: { ...globals, glyphs: afterGlyphs }, locals: { coords: [0, 0], direction: 0, eyePaletteOverride: activeEyePalette } });
     }
   } else if (flyweight?.isGlyphing) {
-    const [sw, sh] = globals.textures.icons.meta.size;
     const makeBuffer = (): AsciiGlyph[][] =>
       Array.from({ length: sh }, () => Array.from({ length: sw }, () => ({ ...TRANSPARENT })));
     const buf = makeBuffer();
@@ -246,10 +201,13 @@ export function AnimatedCharacter({
     afterGlyphs = buf;
   }
 
-  const paletteKeys = animDef?.palette ?? [0];
-  const animPalette = paletteKeys[Math.min(Math.floor(glyphProgress * paletteKeys.length), paletteKeys.length - 1)];
-
-  sheet!.drawFrame(frameGlyphs, animName, frameIndex, beforeGlyphs, afterGlyphs, dox, doy, animPalette);
+  render(
+    { type: "AnimatedSpriteRenderer", animation: animName, looping: false, palette: 0 },
+    {
+      globals: frameGlobals,
+      locals: { coords: [dox, doy], animationProgress: glyphProgress, beforeGlyphs, afterGlyphs },
+    }
+  );
 
   const overlayDivs = buildOverlayDivs();
   const animatedDiv = (
