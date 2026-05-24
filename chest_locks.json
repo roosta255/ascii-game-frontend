@@ -12,5 +12,36 @@
             "sprite": "JAILER_KEYLESS",
             "palette": 0
         }
-    }
+    },
+    "TOGGLER_BLUE_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "DOOR_TOGGLER_NORTH",
+            "palette": 13
+        }
+    },
+    "TOGGLER_BLUE_OPEN": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "DOOR_TOGGLER_NORTH",
+            "palette": 13
+        }
+    },
+    "TOGGLER_ORANGE_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "DOOR_TOGGLER_NORTH",
+            "palette": 12
+        }
+    },
+    "TOGGLER_ORANGE_OPEN": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "DOOR_TOGGLER_NORTH",
+            "palette": 12
+        }
+    },
+    "NIL": {"renderer": {"type": "Unrendered"}},
+    "KEY_CATALYST_OPEN": {"renderer": {"type": "Unrendered"}},
+    "KEY_CONSUMER_OPEN": {"renderer": {"type": "Unrendered"}}
 }
