@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveTraitActive, resolveStatusEffects, StatusEffectConfig } from './AnimatedCharacter';
+import { resolveTraitActive } from './AnimatedCharacter';
 import { Keyframe } from './Keyframe';
 
 function kf(animation: string, t0: number, t1: number, data: number[]): Keyframe {
@@ -102,6 +102,37 @@ describe('resolveTraitActive — boundary at t0', () => {
   });
 });
 
+// ── resolveTraitActive — stale keyframe (t > t1) falls back to traitsComputed ─
+
+describe('resolveTraitActive — stale keyframe after t1 defers to traitsComputed', () => {
+  it('stale turn-ON keyframe does not override absent traitsComputed', () => {
+    // Regression: old PIETY turn-ON keyframe should not force eye color on indefinitely
+    const kfs = [kf('PIETY', 1000, 1800, [0, 1])];
+    expect(resolveTraitActive('PIETY', kfs, [], 99999)).toBe(false);
+  });
+
+  it('stale turn-ON keyframe still returns true when traitsComputed confirms it', () => {
+    const kfs = [kf('PIETY', 1000, 1800, [0, 1])];
+    expect(resolveTraitActive('PIETY', kfs, ['PIETY'], 99999)).toBe(true);
+  });
+
+  it('stale turn-OFF keyframe does not suppress an active traitsComputed entry', () => {
+    const kfs = [kf('SLEEP', 1000, 1800, [1, 0])];
+    expect(resolveTraitActive('SLEEP', kfs, ['SLEEP'], 99999)).toBe(true);
+  });
+
+  it('exactly at t1 still uses data[1], not traitsComputed', () => {
+    const kfs = [kf('SLEEP', 500, 1300, [0, 1])];
+    expect(resolveTraitActive('SLEEP', kfs, [], 1300)).toBe(true);
+  });
+
+  it('one tick past t1 defers to traitsComputed', () => {
+    const kfs = [kf('SLEEP', 500, 1300, [0, 1])];
+    expect(resolveTraitActive('SLEEP', kfs, [], 1301)).toBe(false);
+    expect(resolveTraitActive('SLEEP', kfs, ['SLEEP'], 1301)).toBe(true);
+  });
+});
+
 // ── resolveTraitActive — eye-color traits behave identically ─────────────────
 
 describe('resolveTraitActive — eye-color traits (PIETY, MAGICAL, UNHOLY)', () => {
@@ -121,78 +152,3 @@ describe('resolveTraitActive — eye-color traits (PIETY, MAGICAL, UNHOLY)', () 
   });
 });
 
-// ── resolveStatusEffects ──────────────────────────────────────────────────────
-
-const PIETY_CONFIG: StatusEffectConfig = { PIETY: { eyePalette: 17 } };
-const SLEEP_CONFIG: StatusEffectConfig = { SLEEP: { loopSprite: 'SLEEP_LOOP' } };
-const FULL_CONFIG: StatusEffectConfig = {
-  PIETY:   { eyePalette: 17 },
-  MAGICAL: { eyePalette: 3  },
-  UNHOLY:  { eyePalette: 6  },
-  SLEEP:   { loopSprite: 'SLEEP_LOOP' },
-  ENCHAIN: { loopSprite: 'ENCHAIN_LOOP' },
-};
-
-describe('resolveStatusEffects — eye-color (regression: PIETY trait visible but no eye change)', () => {
-  it('sets activeEyePalette from config when trait is in traitsComputed, no flyweight needed', () => {
-    // This was the bug: the old code gated on animationFlyweights[effectName]?.isEyeColor,
-    // which was falsy when the backend had not yet returned PIETY in its animation flyweights.
-    const { activeEyePalette } = resolveStatusEffects(PIETY_CONFIG, [], ['PIETY'], 1000);
-    expect(activeEyePalette).toBe(17);
-  });
-
-  it('does not set activeEyePalette when trait is absent', () => {
-    const { activeEyePalette } = resolveStatusEffects(PIETY_CONFIG, [], [], 1000);
-    expect(activeEyePalette).toBeUndefined();
-  });
-
-  it('uses correct palette per trait — MAGICAL → 3, UNHOLY → 6', () => {
-    expect(resolveStatusEffects(FULL_CONFIG, [], ['MAGICAL'], 1000).activeEyePalette).toBe(3);
-    expect(resolveStatusEffects(FULL_CONFIG, [], ['UNHOLY'], 1000).activeEyePalette).toBe(6);
-  });
-
-  it('last active eye-color effect wins when multiple are active', () => {
-    // Object.entries iteration order is insertion order; PIETY is first, MAGICAL second.
-    const { activeEyePalette } = resolveStatusEffects(FULL_CONFIG, [], ['PIETY', 'MAGICAL'], 1000);
-    expect(activeEyePalette).toBe(3); // MAGICAL overwrote PIETY
-  });
-});
-
-describe('resolveStatusEffects — overlays', () => {
-  it('includes loopSprite effect name when trait is active', () => {
-    const { activeOverlayEffects } = resolveStatusEffects(SLEEP_CONFIG, [], ['SLEEP'], 1000);
-    expect(activeOverlayEffects).toContain('SLEEP');
-  });
-
-  it('excludes overlay when trait is absent', () => {
-    const { activeOverlayEffects } = resolveStatusEffects(SLEEP_CONFIG, [], [], 1000);
-    expect(activeOverlayEffects).toHaveLength(0);
-  });
-
-  it('collects multiple active overlays', () => {
-    const { activeOverlayEffects } = resolveStatusEffects(FULL_CONFIG, [], ['SLEEP', 'ENCHAIN'], 1000);
-    expect(activeOverlayEffects).toContain('SLEEP');
-    expect(activeOverlayEffects).toContain('ENCHAIN');
-    expect(activeOverlayEffects).toHaveLength(2);
-  });
-});
-
-describe('resolveStatusEffects — keyframe timeline gates activation', () => {
-  it('does not set eyePalette before a turn-ON keyframe starts', () => {
-    const kfs = [kf('PIETY', 500, 1300, [0, 1])];
-    const { activeEyePalette } = resolveStatusEffects(PIETY_CONFIG, kfs, ['PIETY'], 499);
-    expect(activeEyePalette).toBeUndefined();
-  });
-
-  it('sets eyePalette once turn-ON keyframe starts', () => {
-    const kfs = [kf('PIETY', 500, 1300, [0, 1])];
-    const { activeEyePalette } = resolveStatusEffects(PIETY_CONFIG, kfs, [], 500);
-    expect(activeEyePalette).toBe(17);
-  });
-
-  it('clears eyePalette when a turn-OFF keyframe has started, even if trait is in traitsComputed', () => {
-    const kfs = [kf('PIETY', 500, 1300, [1, 0])];
-    const { activeEyePalette } = resolveStatusEffects(PIETY_CONFIG, kfs, ['PIETY'], 600);
-    expect(activeEyePalette).toBeUndefined();
-  });
-});

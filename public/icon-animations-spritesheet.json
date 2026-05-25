@@ -14,6 +14,8 @@
         "TOGGLER_SWITCH_BLUE": {"start": [0, 4], "length": 9, "palette": [3]},
         "TOGGLER_SWITCH_ORANGE": {"start": [0, 4], "length": 9, "palette": [12]},
         "JUMP": {"start": [0, 5], "length": 9, "palette": [1]},
-        "CRITTER_BITE": {"start": [0, 6], "length": 9, "palette": [1]}
+        "CRITTER_BITE": {"start": [0, 6], "length": 9, "palette": [1]},
+        "PIETY_TRAIT": {"start": [0, 13], "length": 13, "palette": [1]},
+        "FORGIVENESS": {"start": [0, 14], "length": 10, "palette": [1]}
     }
 }

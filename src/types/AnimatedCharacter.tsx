@@ -56,7 +56,8 @@ export function resolveTraitActive(
     if (traitKfs.length === 0) return traitsComputed.includes(traitName);
     const lastKf = traitKfs.reduce((a, b) => b.t1 > a.t1 ? b : a);
     if (t < lastKf.t0) return lastKf.data[0] === 1;
-    return lastKf.data[1] === 1;
+    if (t <= lastKf.t1) return lastKf.data[1] === 1;
+    return traitsComputed.includes(traitName);
 }
 
 export function AnimatedCharacter({
@@ -105,7 +106,8 @@ export function AnimatedCharacter({
 
   if (traitPainter) {
     for (const [effectName, renderer] of Object.entries(traitPainter.renderers)) {
-      if (!resolveTraitActive(effectName, keyframes, traits, spriteTime)) continue;
+      const traitName = effectName.includes(':') ? effectName.split(':')[0] : effectName;
+      if (!resolveTraitActive(traitName, keyframes, traits, spriteTime)) continue;
       if (renderer.type === "EyePaletteRenderer") {
         activeEyePalette = renderer.palette;
       } else if (renderer.type === "AnimatedSpriteRenderer") {

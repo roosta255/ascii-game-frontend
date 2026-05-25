@@ -7,7 +7,8 @@
     "ENRAGE":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENRAGE_LOOP",  "looping": true, "palette": 1 } },
     "FROZEN":  { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "FROZEN_LOOP",  "looping": true, "palette": 1 } },
     "ENFLAME": { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "ENFLAME_LOOP", "looping": true, "palette": 1 } },
-    "PIETY":   { "renderer": { "type": "EyePaletteRenderer", "palette": 2 } },
+    "PIETY":         { "renderer": { "type": "EyePaletteRenderer", "palette": 2 } },
+    "PIETY:OVERLAY": { "renderer": { "type": "AnimatedSpriteRenderer", "animation": "PIETY_TRAIT", "looping": true, "palette": 1 } },
     "MAGICAL": { "renderer": { "type": "EyePaletteRenderer", "palette": 3 } },
     "UNHOLY":  { "renderer": { "type": "EyePaletteRenderer", "palette": 5 } }
 }
