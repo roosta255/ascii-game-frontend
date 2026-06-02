@@ -1,4 +1,32 @@
 {
+    "KEY_JAILER_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "KEY_JAILER_OPEN": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "JAILER_KEYED",
+            "palette": 0
+        }
+    },
+    "KEY_KEEPER_CLOSED": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYLESS",
+            "palette": 0
+        }
+    },
+    "KEY_KEEPER_OPEN": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "KEEPER_KEYED",
+            "palette": 0
+        }
+    },
     "KEY_CATALYST_CLOSED": {
         "renderer": {
             "type": "SpriteRenderer",
