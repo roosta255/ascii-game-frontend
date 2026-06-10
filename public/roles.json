@@ -1,4 +1,14 @@
 {
+    "MONKEY": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 0,
+            "eyes": 23,
+            "sprite": "MONKEY",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
     "SACRAMENT_FORGIVENESS": { "renderer": { "type": "CharacterRenderer", "palette": 0, "eyes": 3, "sprite": "SACRAMENT_FORGIVENESS", "bleedable": false, "sleepable": false }
     },
     "TOGGLER": {

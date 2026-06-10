@@ -79,11 +79,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
   const [roomTransition, setRoomTransition] = useState<{toRoom: number;direction: number;endTime: number;} | null>(null);
   const [predictedMoves, setPredictedMoves] = useState<Keyframe[]>([]);
   const [requestErrorLog, setRequestErrorLog] = useState<any[] | null>(null);
-  const [interaction, setInteraction] = useState<{
-    type: 'idle' | 'awaitingItem';
-    target?: { kind: 'lock'; direction: number };
-    validItemTypes?: string[];
-  }>(() => ({ type: 'idle' }));
+  const [interaction, setInteraction] = useState<
+    | { type: 'idle' }
+    | { type: 'awaitingItem'; target: { kind: 'lock'; direction: number }; validItemTypes: string[] }
+    | { type: 'selectingItemToolTarget'; itemIndex: number }
+  >(() => ({ type: 'idle' }));
   // Stat predictions (moves/actions consumed). Kept as a ref so rapid clicks
   // read the latest value synchronously without waiting for a React re-render.
   const predictedStatsRef = useRef<Keyframe[]>([]);
@@ -234,8 +234,18 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         setInteraction({ type: 'idle' });
       }
     };
+    const cancelOnRightClick = (e: MouseEvent) => {
+      if (interaction.type !== 'idle') {
+        e.preventDefault();
+        setInteraction({ type: 'idle' });
+      }
+    };
     window.addEventListener('keydown', cancel);
-    return () => window.removeEventListener('keydown', cancel);
+    window.addEventListener('contextmenu', cancelOnRightClick);
+    return () => {
+      window.removeEventListener('keydown', cancel);
+      window.removeEventListener('contextmenu', cancelOnRightClick);
+    };
   }, [interaction]);
 
   const lastLoggedKeyframesRef = useRef<string>('');
@@ -689,6 +699,31 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     await refreshMatch();
   }
 
+  async function activateItemAsTool(extraParams: Record<string, unknown>) {
+    if (interaction.type !== 'selectingItemToolTarget') return;
+    const { itemIndex } = interaction;
+    setInteraction({ type: 'idle' });
+    try {
+      getSynth().playSquare(220);
+      const builderCharacter = match.builders[BUILDER_ID].character;
+      const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
+      predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
+      const body = { account, room: viewedRoomId, character: builderOffset, item: itemIndex, isForcedTurnEnd, ...extraParams };
+      const response = await fetch(`${API_BASE}/api/match/${match.filename}/activate_inventory_item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const { ok } = await handleApiResponse(response);
+      if (!ok) { predictedStatsRef.current = []; return; }
+      await refreshMatch();
+      predictedStatsRef.current = [];
+    } catch (error) {
+      console.error('Error activating item as tool:', error);
+      predictedStatsRef.current = [];
+    }
+  }
+
   function drawRoomAt(roomX: number, roomY: number, room: any, roomId: number) {
 
     // TODO: remove global mutation
@@ -727,6 +762,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         return;
       }
       const onClick = (!character.isActionable || !isMatchStarted) ? undefined : async () => {
+        if (interaction.type === 'selectingItemToolTarget') {
+          await activateItemAsTool({ target: cell.offset });
+          return;
+        }
         try {
           const builderCharacter = match.builders[BUILDER_ID].character;
           const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
@@ -773,6 +812,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableFloor(drawX: number, drawY: number, floor: number) {
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        if (interaction.type === 'selectingItemToolTarget') {
+          await activateItemAsTool({ floor });
+          return;
+        }
         try {
           const builderCharacter = match.builders[BUILDER_ID].character;
           const currentAnimTime = performance.now() - times.serverToClientOffset;
@@ -868,6 +911,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableDoorway(drawX: number, drawY: number, direction: number, route: string, nextViewedRoomId?: number) {
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        if (interaction.type === 'selectingItemToolTarget') {
+          await activateItemAsTool({ direction });
+          return;
+        }
         const builderCharacter = match.builders[BUILDER_ID].character;
         const currentAnimTime = performance.now() - times.serverToClientOffset;
         const predictedLoc = predictedLocationRef.current;
@@ -948,6 +995,10 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     function setClickableLock(drawX: number, drawY: number, direction: number) {
       if (!isMatchStarted) return;
       markRegionClickable(drawX, drawY, CELL_SIZE_X, CELL_SIZE_Y, async () => {
+        if (interaction.type === 'selectingItemToolTarget') {
+          await activateItemAsTool({ direction });
+          return;
+        }
         const rules = getMatchingLockRules(direction);
         const itemRules = rules.filter(r => r.requiresItem);
         const noItemRules = rules.filter(r => !r.requiresItem);
@@ -1127,22 +1178,39 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       stride: [6, 6],
     }
     for (const item of player.inventory.items) {
-      const isHighlighted =
+      const isAwaitItemHighlight =
         interaction.type === 'awaitingItem' &&
         interaction.validItemTypes?.includes(item.type);
+      const isSelectedTool =
+        interaction.type === 'selectingItemToolTarget' &&
+        item.index === interaction.itemIndex;
+      const isHighlighted = isAwaitItemHighlight || isSelectedTool;
+
+      const isUtilizedTool = (item.itemAttributes as string[] | undefined)?.includes('ITEM_UTILIZED') ?? false;
 
       const onClick = !item.isActionable ? undefined : async () => {
+        // If a tool target is being selected, this item click is the target
+        if (interaction.type === 'selectingItemToolTarget') {
+          await activateItemAsTool({ target_item: item.index, target_inventory: player.inventory.inventoryId });
+          return;
+        }
+
         // Interaction mode: use item on a lock
         if (interaction.type === 'awaitingItem') {
           if (!interaction.validItemTypes?.includes(item.type)) {
             getSynth().error?.();
             return;
           }
-          if (interaction.target?.kind === 'lock') {
-            // activateLock is defined inside drawRoomAt; call it via the ref captured below
+          if (interaction.target.kind === 'lock') {
             await activateLock(interaction.target.direction, item.index);
           }
           setInteraction({ type: 'idle' });
+          return;
+        }
+
+        // Item must be targeted at a second click — enter selecting mode
+        if (isUtilizedTool) {
+          setInteraction({ type: 'selectingItemToolTarget', itemIndex: item.index });
           return;
         }
 
@@ -1195,10 +1263,11 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       } else if (item.type !== "NIL") {
         globals.painters.items.draw(item.type, {globals, locals: {coords: itemDraw, onClick}});
         if (isHighlighted) {
+          const hlColor = isSelectedTool ? 0x223344 : 0x225522;
           for (let dy = 0; dy < 6; dy++) {
             for (let dx = 0; dx < 6; dx++) {
               const g = globals.glyphs[itemDraw[1] + dy]?.[itemDraw[0] + dx];
-              if (g) g.bg = 0x225522;
+              if (g) g.bg = hlColor;
             }
           }
         }
@@ -1213,7 +1282,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     }
   }
 
-  const chestProps = { globals, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime, isMatchStarted };
+  const chestProps = { globals, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime, isMatchStarted, activateItemAsTool, isSelectingToolTarget: interaction.type === 'selectingItemToolTarget' };
 
   if (!isMobile) {
     // Panel toggle tabs

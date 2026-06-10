@@ -1,4 +1,11 @@
 {
+    "COIN": {
+        "renderer": {
+            "type": "SpriteRenderer",
+            "sprite": "COINS",
+            "palette": 0
+        }
+    },
     "KEY": {
         "renderer": {
             "type": "SpriteRenderer",

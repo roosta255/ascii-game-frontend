@@ -24,6 +24,8 @@ export interface DrawChestProps {
   isLocallyAnimating: (k: Keyframe) => boolean;
   entityLocalAnimTime: (keyframes: Keyframe[]) => number | undefined;
   isMatchStarted: boolean;
+  activateItemAsTool?: (extraParams: Record<string, unknown>) => Promise<void>;
+  isSelectingToolTarget?: boolean;
 }
 
 const CHEST_ITEMS_WIDE = 3;
@@ -33,7 +35,7 @@ const CELL_SIZE_Y = 4;
 
 export function drawChestAt(
   offset: [number, number],
-  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime, isMatchStarted }: DrawChestProps,
+  { globals, chest, account, match, viewedRoomId, builderOffset, BUILDER_ID, predictedStatsRef, times, refreshMatch, animationFlyweights, animationTime, roomProps, isLocallyAnimating, entityLocalAnimTime, isMatchStarted, activateItemAsTool, isSelectingToolTarget }: DrawChestProps,
 ) {
   const spriteName = chest.isLocked ? 'CHEST_6_LOCKED' : 'CHEST_6_UNLOCKED';
   globals.textures.minimap.draw(globals.glyphs, spriteName, offset[0], offset[1], 0);
@@ -103,6 +105,10 @@ export function drawChestAt(
       const itemDraw: [number, number] = calculatePosition(itemGrid, itemCell);
       const capturedIndex = item.index;
       const onClick = async () => {
+        if (isSelectingToolTarget && activateItemAsTool) {
+          await activateItemAsTool({ target_item: capturedIndex, target_inventory: chest.inventory?.inventoryId });
+          return;
+        }
         try {
           getSynth().playSquare(220);
           const builderCharacter = match.builders[BUILDER_ID].character;
