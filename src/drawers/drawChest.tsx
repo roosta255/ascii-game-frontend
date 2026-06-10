@@ -99,14 +99,14 @@ export function drawChestAt(
       stride: [6, 6],
     };
 
-    for (const item of (chest.inventory?.items ?? [])) {
+    for (const [arrayIndex, item] of (chest.inventory?.items ?? []).entries()) {
       if (item.type === 'NIL') continue;
-      const itemCell: [number, number] = [item.index % CHEST_ITEMS_WIDE, Math.floor(item.index / CHEST_ITEMS_WIDE)];
+      const itemCell: [number, number] = [arrayIndex % CHEST_ITEMS_WIDE, Math.floor(arrayIndex / CHEST_ITEMS_WIDE)];
       const itemDraw: [number, number] = calculatePosition(itemGrid, itemCell);
       const capturedIndex = item.index;
       const onClick = async () => {
         if (isSelectingToolTarget && activateItemAsTool) {
-          await activateItemAsTool({ target_item: capturedIndex, target_inventory: chest.inventory?.inventoryId });
+          await activateItemAsTool({ target_item: capturedIndex });
           return;
         }
         try {
@@ -114,7 +114,7 @@ export function drawChestAt(
           const builderCharacter = match.builders[BUILDER_ID].character;
           const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
-          const body = { action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, target_item: capturedIndex, target_inventory: chest.inventory?.inventoryId, isForcedTurnEnd };
+          const body = { action: 'LOOT_CHEST', account, room: viewedRoomId, character: builderOffset, target: containerCharacterId, target_item: capturedIndex, isForcedTurnEnd };
           const response = await fetch(`${API_BASE}/api/match/${match.filename}/perform_character_action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

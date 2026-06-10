@@ -1177,7 +1177,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       offset: [3, 3],
       stride: [6, 6],
     }
-    for (const item of player.inventory.items) {
+    for (const [arrayIndex, item] of player.inventory.items.entries()) {
       const isAwaitItemHighlight =
         interaction.type === 'awaitingItem' &&
         interaction.validItemTypes?.includes(item.type);
@@ -1191,7 +1191,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       const onClick = !item.isActionable ? undefined : async () => {
         // If a tool target is being selected, this item click is the target
         if (interaction.type === 'selectingItemToolTarget') {
-          await activateItemAsTool({ target_item: item.index, target_inventory: player.inventory.inventoryId });
+          await activateItemAsTool({ target_item: item.index });
           return;
         }
 
@@ -1243,7 +1243,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
         }
       };
 
-      const itemCell: [number, number] = [item.index % INVENTORY_WIDTH, Math.floor(item.index / INVENTORY_WIDTH)];
+      const itemCell: [number, number] = [arrayIndex % INVENTORY_WIDTH, Math.floor(arrayIndex / INVENTORY_WIDTH)];
       const itemDraw: [number, number] = calculatePosition(inventoryGrid, itemCell);
       if (item.keyframes?.some((k: Keyframe) => isLocallyAnimating(k))) {
         globals.animatedExtras.push(
