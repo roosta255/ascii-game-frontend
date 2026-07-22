@@ -96,6 +96,50 @@
             "type": "Unrendered"
         }
     },
+    "LATCH_EGRESS_CLOSED": { "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        } },
+    "LATCH_EGRESS_OPEN": { "renderer": { "type": "Unrendered" } },
+    "LATCH_INGRESS_CLOSED": { "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        } },
+    "LATCH_INGRESS_OPEN": { "renderer": { "type": "Unrendered" } },
     "SHIFTER_EGRESS_KEYED": {
         "renderer": {
             "type": "Unrendered"

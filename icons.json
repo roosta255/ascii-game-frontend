@@ -66,6 +66,8 @@
         "JAILER_KEYED_BROKEN": [1,10],
         "KEEPER_KEYLESS": [4,3],
         "KEEPER_KEYED": [5,3],
+        "LATCH_OPEN": [21,17],
+        "LATCH_CLOSED": [22,17],
         "LADDER_BOTTOM_NORTH": [13,17],
         "LADDER_BOTTOM_WEST": [14,17],
         "LADDER_TOP_EAST": [14,17],
