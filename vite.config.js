@@ -26,7 +26,7 @@ export default defineConfig(({ command, mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'https://game-backend.callawayservice.com',
+          target: env.VITE_DEV_API_URL,
           changeOrigin: true,
           secure: true,
         }

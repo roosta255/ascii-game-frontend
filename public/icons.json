@@ -7,8 +7,11 @@
     "default": [11, 16],
     "sprites": {
         "NIL": [0,13],
+        "CADDY": [21,16],
         "COVENANT": [20,19],
         "SACRAMENT_FORGIVENESS": [12,19],
+        "SHARER_KEYED": [17,15],
+        "SHARER_KEYLESS": [18,15],
         "TOGGLER": [0,14],
         "MOUSTACHER": [8,4],
         "MONKEY": [20,16],

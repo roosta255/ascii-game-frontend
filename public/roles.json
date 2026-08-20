@@ -1,4 +1,14 @@
 {
+    "CADDY": {
+        "renderer": {
+            "type": "CharacterRenderer",
+            "palette": 0,
+            "eyes": 3,
+            "sprite": "CADDY",
+            "bleedable": false,
+            "sleepable": false
+        }
+    },
     "MONKEY": {
         "renderer": {
             "type": "CharacterRenderer",
