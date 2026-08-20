@@ -64,6 +64,8 @@
     "LATCH_EGRESS_OPEN": { "renderer": { "type": "Unrendered" } },
     "LATCH_INGRESS_CLOSED": { "renderer": { "type": "SpriteRenderer", "sprite": "LATCH_CLOSED", "palette": 0 } },
     "LATCH_INGRESS_OPEN": { "renderer": { "type": "SpriteRenderer", "sprite": "LATCH_OPEN", "palette": 0 } },
+    "SHARER_KEYED": { "renderer": { "type": "SpriteRenderer", "sprite": "SHARER_KEYED", "palette": 0 } },
+    "SHARER_KEYLESS": { "renderer": { "type": "SpriteRenderer", "sprite": "SHARER_KEYLESS", "palette": 0 } },
     "WALL": { "renderer": { "type": "Unrendered" } },
     "WALL_ALLOCATED": { "renderer": { "type": "Unrendered" } },
     "LIGHTNING_ROD_AWAKENED": { "renderer": { "type": "SpriteRenderer", "sprite": "CUBE", "palette": 5 } },

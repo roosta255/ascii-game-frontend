@@ -140,6 +140,34 @@
             ]
         } },
     "LATCH_INGRESS_OPEN": { "renderer": { "type": "Unrendered" } },
+    "SHARER_KEYED": {
+        "renderer": {
+            "type": "Unrendered"
+        }
+    },
+    "SHARER_KEYLESS": {
+        "renderer": {
+            "type": "DoorRenderer",
+            "directions": [
+                {
+                    "sprite": "DOOR_GRILLE_NORTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_EAST",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_SOUTH",
+                    "palette": 3
+                },
+                {
+                    "sprite": "DOOR_GRILLE_WEST",
+                    "palette": 3
+                }
+            ]
+        }
+    },
     "SHIFTER_EGRESS_KEYED": {
         "renderer": {
             "type": "Unrendered"
