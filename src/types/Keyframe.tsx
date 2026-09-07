@@ -23,6 +23,23 @@ export function isKeyframeAnimating(keyframe: Keyframe, animationTime: number): 
   return keyframe.animation !== "NIL" && keyframe.t1 >= animationTime;
 }
 
+/**
+ * The animation names handled by digestKeyframes' getKeyframeMovement switch below.
+ * KEEP IN SYNC with the switch — it is exported so callers can detect keyframe
+ * animations that fall through the switch and would otherwise be silently ignored.
+ */
+export const MOVEMENT_ANIMATIONS: ReadonlySet<string> = new Set([
+  "WALKING_FROM_WALL_TO_WALL",
+  "WALKING_FROM_WALL_TO_FLOOR",
+  "WALKING_FROM_FLOOR_TO_WALL",
+  "WALKING_FROM_FLOOR_TO_FLOOR",
+  "BOUNCE_FROM_FLOOR_TO_FLOOR",
+  "STANDING_AT_DOOR",
+  "STANDING_AT_FLOOR",
+  "DOOR_LOCK_BOUNCE_FROM_FLOOR",
+  "DOOR_LOCK_BOUNCE_FROM_DOOR",
+]);
+
 export function digestKeyframes(keyframes: Keyframe[], animationTime: number, room: RoomProps, defaultPosition?: [number, number]): KeyframeDigest {
   // animations are a list of keyframes, but if overlapping, then some blending is required
   // say a character has 2 animations, where are they rendered in between?
@@ -60,6 +77,10 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
           toFloorGlyphsFromCell(room, k.data[0]),
           toFloorGlyphsFromCell(room, k.data[1]),
           lerp];
+        case "BOUNCE_FROM_FLOOR_TO_FLOOR": return [
+          toFloorGlyphsFromCell(room, k.data[0]),
+          toFloorGlyphsFromCell(room, k.data[1]),
+          bounce];
         case "STANDING_AT_DOOR": return [
           toFloorGlyphsFromDoor(room, k.data[1]),
           toFloorGlyphsFromDoor(room, k.data[1]),
@@ -98,7 +119,7 @@ export function digestKeyframes(keyframes: Keyframe[], animationTime: number, ro
       // (e.g. transition animations) can still render at the correct position.
       // bounce animations return the character to their starting position (xy0),
       // not the lock they bounced toward (xy1).
-      const isBounce = k.animation === "DOOR_LOCK_BOUNCE_FROM_FLOOR" || k.animation === "DOOR_LOCK_BOUNCE_FROM_DOOR";
+      const isBounce = k.animation === "DOOR_LOCK_BOUNCE_FROM_FLOOR" || k.animation === "DOOR_LOCK_BOUNCE_FROM_DOOR" || k.animation === "BOUNCE_FROM_FLOOR_TO_FLOOR";
       lastExpiredPosition = isBounce ? xy0 : xy1;
       lastExpiredT1 = k.t1;
     }

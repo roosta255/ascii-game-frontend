@@ -10,7 +10,7 @@ import { AnimatedCharacter } from "./types/AnimatedCharacter";
 import { loadXp, createBlankCanvas } from "./types/AsciiGlyph";
 import { DrawerProps, rebuildGlyphs } from "./types/DrawerProps";
 import { calculatePosition, GridCalculator } from "./types/GridCalculator";
-import { createMovePrediction, createLockBouncePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe, predictedMovesRemaining, predictedActionsRemaining, createMoveDecrementPrediction, createActionDecrementPrediction } from "./types/Keyframe";
+import { createMovePrediction, createLockBouncePrediction, isKeyframeDuplicate, isKeyframeAnimating, Keyframe, MOVEMENT_ANIMATIONS, predictedMovesRemaining, predictedActionsRemaining, createMoveDecrementPrediction, createActionDecrementPrediction } from "./types/Keyframe";
 import { CellSize } from "./types/CellSize";
 import { TimeRef } from "./types/TimeRef";
 import { RoomPropLoader, RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from "./types/RoomProps";
@@ -23,10 +23,31 @@ import "./MatchRenderer.css";
 const DEBUG_KEYFRAMES = import.meta.env.VITE_DEBUG_KEYFRAMES === 'true';
 const EVENT_LOG_CAPACITY = 8;
 
-function debugKeyframes(label: string, keyframes: Keyframe[]) {
+function debugKeyframes(label: string, keyframes: Keyframe[], times?: TimeRef) {
   if (!DEBUG_KEYFRAMES) return;
-  console.groupCollapsed(`[keyframes] ${label} (${keyframes.length})`);
-  console.log(JSON.stringify(keyframes, null, 2));
+  // Timestamp of when this keyframe set was detected on the client.
+  const detectedClientTime = performance.now();
+  // Convert to server time using the same offset the animation clock uses
+  // (server time = client performance.now() - serverToClientOffset).
+  const detectedServerTime =
+    times && times.serverToClientOffset !== 0
+      ? detectedClientTime - times.serverToClientOffset
+      : null;
+  const stamp =
+    detectedServerTime != null
+      ? `client=${detectedClientTime.toFixed(0)}ms / server=${detectedServerTime.toFixed(0)}ms`
+      : `client=${detectedClientTime.toFixed(0)}ms / server=unknown`;
+  console.groupCollapsed(`[keyframes] ${label} (${keyframes.length}) — detected @ ${stamp}`);
+  console.log(
+    JSON.stringify(
+      {
+        detectedAt: { clientTime: detectedClientTime, serverTime: detectedServerTime },
+        keyframes,
+      },
+      null,
+      2
+    )
+  );
   console.groupEnd();
 }
 
@@ -34,7 +55,7 @@ export interface MatchRendererProps {
   match: any;
   viewedRoomId: number;
   setViewedRoomId: (id: number) => void;
-  timeRef: TimeRef;
+  timeRef: { current: TimeRef };
   refreshMatch: () => Promise<void>;
 }
 
@@ -248,17 +269,102 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
     };
   }, [interaction]);
 
-  const lastLoggedKeyframesRef = useRef<string>('');
-  // Log server keyframes whenever they actually change
+  // Per-character (keyed by offset) JSON of the last-logged server keyframes.
+  const lastLoggedKeyframesRef = useRef<Map<string, string>>(new Map());
+  // Log server keyframes for every character in the viewed room whenever they
+  // change between get-match polls. This surfaces NPC animation keyframes, not
+  // just the local builder's.
   useEffect(() => {
     if (!DEBUG_KEYFRAMES || !match) return;
-    const builderChar = match.builders?.[0]?.character;
-    if (!builderChar) return;
-    const json = JSON.stringify(builderChar.keyframes ?? []);
-    if (json === lastLoggedKeyframesRef.current) return;
-    lastLoggedKeyframesRef.current = json;
-    debugKeyframes(`server → builder keyframes (t=${performance.now().toFixed(0)})`, builderChar.keyframes ?? []);
-  }, [match]);
+    const room = match.dungeon?.rooms?.[viewedRoomId];
+    if (!room) return;
+
+    const isInViewedRoom = (character: any): boolean => {
+      if (!character) return false;
+      if ((character.keyframes ?? []).some((k: Keyframe) => k.room0 === viewedRoomId)) return true;
+      if (room.floorCells?.some((c: any) => c.offset === character.offset)) return true;
+      if (room.walls?.some((w: any) => w.cell?.offset === character.offset)) return true;
+      return false;
+    };
+
+    const builderOffsets = new Set(
+      (match.builders ?? []).map((b: any) => b.character?.offset).filter((o: any) => o != null)
+    );
+
+    for (const character of getAllCharacters(match)) {
+      if (!character || !isInViewedRoom(character)) continue;
+      const keyframes: Keyframe[] = character.keyframes ?? [];
+      const key = String(character.offset ?? character.characterId ?? character.role);
+      const json = JSON.stringify(keyframes);
+      if (lastLoggedKeyframesRef.current.get(key) === json) continue;
+      lastLoggedKeyframesRef.current.set(key, json);
+      const kind = builderOffsets.has(character.offset) ? 'builder' : 'npc';
+      const name = character.role ?? character.name ?? key;
+      debugKeyframes(
+        `server → ${kind} "${name}" (offset ${character.offset}) keyframes changed`,
+        keyframes,
+        timeRef.current
+      );
+    }
+  }, [match, viewedRoomId]);
+
+  // Coverage checks: surface animations that appear in server keyframes but that
+  // no client render path handles, so they don't fail silently. Each distinct
+  // animation name is reported at most once per session.
+  const reportedAnimationGapsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!match || !flyweights) return;
+
+    const flyweightByName = new Map((flyweights.animations ?? []).map(a => [a.name, a]));
+    const spritesheet = animationSheet?.meta.spritesheet ?? {};
+    const STAT_PREDICTION_ANIMATIONS = new Set(['MOVE_DECREMENT', 'ACTION_DECREMENT']);
+
+    const seen = new Set<string>();
+    for (const character of getAllCharacters(match)) {
+      for (const k of (character?.keyframes ?? []) as Keyframe[]) {
+        const name = k?.animation;
+        if (!name || name === 'NIL' || seen.has(name)) continue;
+        seen.add(name);
+        if (reportedAnimationGapsRef.current.has(name)) continue;
+        // Stat-prediction keyframes intentionally have neither a flyweight nor a visual handler.
+        if (STAT_PREDICTION_ANIMATIONS.has(name)) continue;
+
+        // 1) Missing from the animation flyweight API (/api/flyweights).
+        if (!flyweightByName.has(name)) {
+          reportedAnimationGapsRef.current.add(name);
+          console.error(
+            `[keyframes] animation "${name}" appears in server keyframes but is missing from the ` +
+            `animation flyweight API (/api/flyweights). The frontend cannot classify it ` +
+            `(transition / glyphing / overlay / eye-color) and it will not render.`
+          );
+          continue;
+        }
+
+        // 2) Missing from digestKeyframes' movement switch (Keyframe.tsx).
+        //    A flyweight animation that is not a transition/glyph/overlay/eye-color effect,
+        //    not a spritesheet animation, not a status-effect trait, and not a stat
+        //    prediction — yet is absent from MOVEMENT_ANIMATIONS — falls through
+        //    getKeyframeMovement() and is silently ignored (this is what BOUNCE_FROM_FLOOR_TO_FLOOR hit).
+        const fw = flyweightByName.get(name)!;
+        const isRenderableEffect = fw.isTransition || fw.isGlyphing || fw.isOverlay || fw.isEyeColor;
+        const isSpritesheetAnim = name in spritesheet;
+        const isTrait = !!traitPainter?.renderers[name];
+        if (
+          !MOVEMENT_ANIMATIONS.has(name) &&
+          !isRenderableEffect &&
+          !isSpritesheetAnim &&
+          !isTrait
+        ) {
+          reportedAnimationGapsRef.current.add(name);
+          console.error(
+            `[keyframes] animation "${name}" has no movement handler in digestKeyframes() ` +
+            `(getKeyframeMovement switch in Keyframe.tsx) and no other render path. If it is a ` +
+            `positional animation, add a case and list it in MOVEMENT_ANIMATIONS; the keyframe is currently ignored.`
+          );
+        }
+      }
+    }
+  }, [match, flyweights, animationSheet, traitPainter]);
 
   // animation loop
   useEffect(() => {
@@ -770,8 +876,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           const builderCharacter = match.builders[BUILDER_ID].character;
           const isForcedTurnEnd = predictedActionsRemaining(builderCharacter.actionsRemaining, predictedStatsRef.current, times.fetchTime) === 0;
           predictedStatsRef.current = [...predictedStatsRef.current, createActionDecrementPrediction(builderCharacter.actionsRemaining, predictedStatsRef.current, times)];
-          debugKeyframes(`character click → predicted stats`, predictedStatsRef.current);
-          debugKeyframes(`character click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
+          debugKeyframes(`character click → predicted stats`, predictedStatsRef.current, times);
+          debugKeyframes(`character click → builder keyframes (server)`, builderCharacter.keyframes ?? [], times);
           getSynth().playSquare(220);
           const target = character.isObject ? builderOffset : cell.offset;
           const activator = character.isObject ? cell.offset : builderOffset;
@@ -838,8 +944,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
             ? [...predictedMovesRef.current.filter(k => !k.animation.startsWith('STANDING_')), ...movePrediction]
             : movePrediction;
           predictedMovesRef.current = chainedPredictions;
-          debugKeyframes(`floor click → predicted movement`, chainedPredictions);
-          debugKeyframes(`floor click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
+          debugKeyframes(`floor click → predicted movement`, chainedPredictions, times);
+          debugKeyframes(`floor click → builder keyframes (server)`, builderCharacter.keyframes ?? [], times);
           setPredictedMoves(chainedPredictions);
           const moveBody = {
             account,
@@ -936,8 +1042,8 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
           ? [...predictedMovesRef.current.filter(k => !k.animation.startsWith('STANDING_')), ...movePrediction]
           : movePrediction;
         predictedMovesRef.current = chainedPredictions;
-        debugKeyframes(`door click → predicted movement`, chainedPredictions);
-        debugKeyframes(`door click → builder keyframes (server)`, builderCharacter.keyframes ?? []);
+        debugKeyframes(`door click → predicted movement`, chainedPredictions, times);
+        debugKeyframes(`door click → builder keyframes (server)`, builderCharacter.keyframes ?? [], times);
         setPredictedMoves(chainedPredictions);
         getSynth().playSquare(220);
         const moveBody = { account, character: builderOffset, room: roomId, direction, isForcedTurnEnd };

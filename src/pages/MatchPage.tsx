@@ -98,7 +98,7 @@ export default function MatchPage() {
       }
     }
 
-    const interval = setInterval(fetchUpdates, 600);
+    const interval = setInterval(fetchUpdates, 100);
     return () => {
       isMounted = false;
       clearInterval(interval);
