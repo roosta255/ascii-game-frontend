@@ -20,6 +20,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: npm run build
 
       - name: Deploy to gh-pages branch

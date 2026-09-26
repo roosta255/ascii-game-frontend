@@ -29,8 +29,11 @@ export function toFloorGlyphsFromLock(
 ): [number, number] {
     const wall = room.cells.walls?.[direction];
     if (!wall?.lock) {
-        return [0,0];
-        // throw new Error(`No lock defined for wall direction ${direction}`);
+        // No lock defined for this wall (e.g. a wall with a door but no
+        // lock) -- fall back to the door position rather than [0,0], which
+        // otherwise renders a lock-bounce animation at the room origin
+        // instead of the door the character actually bounced toward.
+        return toFloorGlyphsFromDoor(room, direction);
     }
 
     const [offsetX, offsetY] = wall.lock.offset;

@@ -85,29 +85,29 @@ describe('isKeyframeAnimating', () => {
 // ── isKeyframeDuplicate ───────────────────────────────────────────────────────
 
 describe('isKeyframeDuplicate', () => {
-  it('matches when animation and destination (data[2]) are the same', () => {
-    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 0, 5, 0]);
-    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1050, 2150, 0, [0, 0, 5, 0]);
+  it('matches when animation and destination (data[1]) are the same', () => {
+    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 5]);
+    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1050, 2150, 0, [0, 5]);
     expect(isKeyframeDuplicate(source, 10000, target)).toBe(true);
   });
 
   it('does not match when destination differs', () => {
-    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 0, 5, 0]);
-    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1050, 2150, 0, [0, 0, 6, 0]);
+    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 5]);
+    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1050, 2150, 0, [0, 6]);
     expect(isKeyframeDuplicate(source, 10000, target)).toBe(false);
   });
 
   it('does not match when animation type differs', () => {
-    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 0, 5, 0]);
-    const target = kf('WALKING_FROM_WALL_TO_FLOOR', 1050, 2150, 0, [0, 0, 5, 0]);
+    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 5]);
+    const target = kf('WALKING_FROM_WALL_TO_FLOOR', 1050, 2150, 0, [0, 5]);
     expect(isKeyframeDuplicate(source, 10000, target)).toBe(false);
   });
 
   // Documents current behaviour: the timeout param is accepted but not used.
   // If you re-enable the time-bound check, this test will need updating.
   it('matches regardless of how far apart in time the keyframes are (timeout is currently ignored)', () => {
-    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 0, 1100, 0, [0, 0, 3, 0]);
-    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 999999, 1001100, 0, [0, 0, 3, 0]);
+    const source = kf('WALKING_FROM_FLOOR_TO_FLOOR', 0, 1100, 0, [0, 3]);
+    const target = kf('WALKING_FROM_FLOOR_TO_FLOOR', 999999, 1001100, 0, [0, 3]);
     expect(isKeyframeDuplicate(source, 10000, target)).toBe(true);
   });
 });
@@ -178,7 +178,7 @@ describe('createMovePrediction', () => {
       expect(move.t1).toBe(nowMs + MOVE_DURATION);
       expect(move.room0).toBe(0);
       expect(move.data[0]).toBe(1);         // source = location.data
-      expect(move.data[2]).toBe(3);         // destination = floorId
+      expect(move.data[1]).toBe(3);         // destination = floorId
     });
 
     it('stand keyframe immediately follows move and lasts STAND_DURATION', () => {
@@ -189,7 +189,7 @@ describe('createMovePrediction', () => {
       expect(stand.animation).toBe('STANDING_AT_FLOOR');
       expect(stand.t0).toBe(move.t1);
       expect(stand.t1).toBe(move.t1 + STAND_DURATION);
-      expect(stand.data[2]).toBe(3);        // standing at destination
+      expect(stand.data[1]).toBe(3);        // standing at destination
     });
 
     it('animationTime is adjusted by serverToClientOffset', () => {
@@ -210,7 +210,7 @@ describe('createMovePrediction', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].animation).toBe('WALKING_FROM_FLOOR_TO_WALL');
-      expect(result[0].data[2]).toBe(2); // direction = destination
+      expect(result[0].data[1]).toBe(2); // direction = destination
     });
   });
 
@@ -258,8 +258,8 @@ describe('createMovePrediction', () => {
 
 describe('queue merging', () => {
   it('prepends predicted keyframes before server keyframes', () => {
-    const predicted = [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [1, 0, 3, 0])];
-    const character = { keyframes: [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1080, 2180, 0, [1, 0, 3, 0])] };
+    const predicted = [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [1, 3])];
+    const character = { keyframes: [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1080, 2180, 0, [1, 3])] };
 
     const result = applyPredictions(predicted, character);
 
@@ -268,36 +268,36 @@ describe('queue merging', () => {
   });
 
   it('keeps server keyframes that go to a different destination', () => {
-    const predicted = [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [1, 0, 3, 0])];
+    const predicted = [kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [1, 3])];
     const character = {
       keyframes: [
-        kf('WALKING_FROM_FLOOR_TO_FLOOR', 1080, 2180, 0, [1, 0, 3, 0]), // duplicate
-        kf('WALKING_FROM_FLOOR_TO_FLOOR', 2180, 3280, 0, [3, 0, 5, 0]), // next move, kept
+        kf('WALKING_FROM_FLOOR_TO_FLOOR', 1080, 2180, 0, [1, 3]), // duplicate
+        kf('WALKING_FROM_FLOOR_TO_FLOOR', 2180, 3280, 0, [3, 5]), // next move, kept
       ],
     };
 
     const result = applyPredictions(predicted, character);
 
     expect(result.keyframes).toHaveLength(2);
-    expect(result.keyframes[1].data[2]).toBe(5);
+    expect(result.keyframes[1].data[1]).toBe(5);
   });
 
   it('passes character through unchanged when predictedMoves is empty', () => {
-    const character = { keyframes: [kf('STANDING_AT_FLOOR', 0, 6000, 0, [3, 0, 3, 0])] };
+    const character = { keyframes: [kf('STANDING_AT_FLOOR', 0, 6000, 0, [3, 3])] };
     const result = applyPredictions([], character);
     expect(result).toBe(character);
   });
 
   it('handles multiple queued predicted moves', () => {
     const predicted = [
-      kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 0, 3, 0]),
-      kf('STANDING_AT_FLOOR', 2100, 8100, 0, [3, 0, 3, 0]),
+      kf('WALKING_FROM_FLOOR_TO_FLOOR', 1000, 2100, 0, [0, 3]),
+      kf('STANDING_AT_FLOOR', 2100, 8100, 0, [3, 3]),
     ];
     const character = { keyframes: [] };
 
     const result = applyPredictions(predicted, character);
 
-    expect(result.keyframes[0].data[2]).toBe(3); // move arrives at 3
+    expect(result.keyframes[0].data[1]).toBe(3); // move arrives at 3
     expect(result.keyframes[1].animation).toBe('STANDING_AT_FLOOR');
   });
 });
@@ -309,8 +309,8 @@ describe('async server response timing', () => {
   const MOVE_DURATION = 1100;
   const STAND_DURATION = 6000;
 
-  const move = kf('WALKING_FROM_FLOOR_TO_FLOOR', START, START + MOVE_DURATION, 0, [0, 0, 3, 0]);
-  const stand = kf('STANDING_AT_FLOOR', START + MOVE_DURATION, START + MOVE_DURATION + STAND_DURATION, 0, [3, 0, 3, 0]);
+  const move = kf('WALKING_FROM_FLOOR_TO_FLOOR', START, START + MOVE_DURATION, 0, [0, 3]);
+  const stand = kf('STANDING_AT_FLOOR', START + MOVE_DURATION, START + MOVE_DURATION + STAND_DURATION, 0, [3, 3]);
 
   // NOTE: isKeyframeAnimating only checks t1 >= animationTime, not t0.
   // Both move and stand are therefore "active" for any time before their t1,
@@ -358,7 +358,7 @@ describe('async server response timing', () => {
   it('server confirms during move: server duplicate is still filtered by destination match', () => {
     const predicted = [move, stand];
     // Server sends the same move with slightly different timing
-    const serverConfirmedMove = kf('WALKING_FROM_FLOOR_TO_FLOOR', START + 80, START + MOVE_DURATION + 80, 0, [0, 0, 3, 0]);
+    const serverConfirmedMove = kf('WALKING_FROM_FLOOR_TO_FLOOR', START + 80, START + MOVE_DURATION + 80, 0, [0, 3]);
     const character = { keyframes: [serverConfirmedMove] };
 
     const result = applyPredictions(predicted, character);
@@ -370,14 +370,14 @@ describe('async server response timing', () => {
 
   it('server sends follow-up move after the predicted destination: both kept', () => {
     const predicted = [move, stand];
-    const serverNextMove = kf('WALKING_FROM_FLOOR_TO_FLOOR', START + MOVE_DURATION + 500, START + MOVE_DURATION + 1600, 0, [3, 0, 7, 0]);
+    const serverNextMove = kf('WALKING_FROM_FLOOR_TO_FLOOR', START + MOVE_DURATION + 500, START + MOVE_DURATION + 1600, 0, [3, 7]);
     const character = { keyframes: [serverNextMove] };
 
     const result = applyPredictions(predicted, character);
 
     // predicted[0] (move to 3) does not match serverNextMove (move to 7) — both kept
     expect(result.keyframes).toHaveLength(3); // move, stand, serverNextMove
-    expect(result.keyframes[2].data[2]).toBe(7);
+    expect(result.keyframes[2].data[1]).toBe(7);
   });
 });
 
