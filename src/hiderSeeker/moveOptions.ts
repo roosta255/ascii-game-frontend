@@ -1,4 +1,7 @@
-// builds what the hider page lists from one hider view (the moves the player can pick, their own cancellable pending moves, and each goal as text), that only a move's shape comes from here while the backend decides whether it is legal, and that nothing here ranks servers or suggests targets (design doc section 3.5)
+// What the hider page lists from one hider view: the moves the player can
+// pick, their own cancellable pending moves, and each goal as text. Only a
+// move's shape comes from here; the backend decides whether it is legal.
+// Nothing here ranks servers or suggests targets (design doc section 3.5).
 
 export interface MoveOption {
   label: string;
@@ -9,16 +12,8 @@ export interface MoveOption {
 export const SERVER_ACTIONS = ["CONFIGURE_SERVER", "SUPPRESS_ERROR", "BOOST_CPU", "ROTATE_ROUTE", "PAY_GOAL"];
 
 /** 
- * `buildMoveOptions(view)`, in this order:
- * 1. While `view.self.server_id` is null: for each server in
- *    `view.servers`, `{ label: `Connect to server ${id}`, intent: { type: "CONNECT", server_id: id } }`.
- *    While connected to server `s`: first
- *    `{ label: `Disconnect from server ${s}`, intent: { type: "DISCONNECT" } }`,
- *    then for each `type` of `SERVER_ACTIONS`, in order,
- *    `{ label: `${type} on server ${s}`, intent: { type } }`.
- * 2. `{ label: "Add a server (1 LOA)", intent: { type: "ADD_SERVER" } }`.
- * 3. For each server in `view.servers`,
- *    `{ label: `Remove server ${id}`, intent: { type: "REMOVE_SERVER", server_id: id } }`.
+ * Connection moves first, then the connected server's actions, then
+ * ADD_SERVER, then REMOVE_SERVER for each active server.
  */
 export function buildMoveOptions(view: any): MoveOption[] {
   const options: MoveOption[] = [];
@@ -66,21 +61,14 @@ export function buildMoveOptions(view: any): MoveOption[] {
 }
 
 /** 
- * `ownPendingMoves(view)`: the entries of `view.pending` whose
- * `hider_id` equals `view.self.hider_id`, in order (the same objects, not
- * copies).
+ * The view's pending moves whose hider_id is the viewing hider's.
  */
 export function ownPendingMoves(view: any): any[] {
   return view.pending.filter((move: any) => move.hider_id === view.self.hider_id);
 }
 
 /** 
- * `goalText(goal)`:
- * `Goal ${goal_id} (${status}, reward ${reward_amount}): ${requirements}`,
- * where `requirements` is each requirement's text joined with `"; "`:
- * - `"SERVER_METRIC_THRESHOLD"`: `server ${server_id} ${metric} >= ${threshold}`
- * - `"ACTIVE_SERVER_COUNT"`: `at least ${threshold} active servers`
- * - any other type: `${type} ${threshold}`
+ * "Goal <id> (<status>, reward <amount>): <requirement>; <requirement>"
  */
 export function goalText(goal: any): string {
   const requirements = goal.requirements.map((req: any) => {
