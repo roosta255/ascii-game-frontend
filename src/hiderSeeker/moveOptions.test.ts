@@ -43,7 +43,7 @@ describe('moveOptions', () => {
       ]);
       
       expect(result[0].label).toBe('Disconnect from server 1');
-      expect(result[3].label).toBe('BOOST_CPU on server 1');
+      expect(result[3].label).toBe('Boost CPU on server 1');
     });
   });
 

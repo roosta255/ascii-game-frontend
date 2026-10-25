@@ -3,6 +3,8 @@
 // move's shape comes from here; the backend decides whether it is legal.
 // Nothing here ranks servers or suggests targets (design doc section 3.5).
 
+import { actionName } from "./viewText";
+
 export interface MoveOption {
   label: string;
   intent: { type: string; server_id?: number };
@@ -35,7 +37,7 @@ export function buildMoveOptions(view: any): MoveOption[] {
     // Then server actions in SERVER_ACTIONS order
     for (const type of SERVER_ACTIONS) {
       options.push({
-        label: `${type} on server ${s}`,
+        label: `${actionName(type)} on server ${s}`,
         intent: { type }
       });
     }
