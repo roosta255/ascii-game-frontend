@@ -126,6 +126,8 @@ export default function LobbyPage() {
     <div style={{ padding: "1rem" }}>
       <h1>Ian's Dungeon Server</h1>
 
+      <p><button onClick={() => navigate("/hs")}>Hider-Seeker</button></p>
+
       <CreateMatchForm onCreate={reload} />
 
       <h2>Your Matches</h2>
