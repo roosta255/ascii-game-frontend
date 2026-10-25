@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
-import { createHsClient } from "../hiderSeeker/hsApi";
+import { createHsClient, isStaleRevision, HsResponse } from "../hiderSeeker/hsApi";
 import { pageMode } from "../hiderSeeker/pageMode";
 import { previewMove, previewPass, describeMoveResult, MAX_ADVANCE_TICKS } from "../hiderSeeker/turnPreview";
 import { buildMoveOptions, ownPendingMoves, goalText } from "../hiderSeeker/moveOptions";
@@ -9,6 +9,8 @@ import { buildMoveOptions, ownPendingMoves, goalText } from "../hiderSeeker/move
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 const POLL_MS = 3000;
 
+// /hs/:matchId: the match lobby (join, start) and, once it is active, the
+// hider's turn UI over the latest hider view.
 export default function HiderSeekerPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const { account } = useAuth();
@@ -59,7 +61,7 @@ export default function HiderSeekerPage() {
     };
   }, [matchId, account]);
 
-  const handle = async (response: any) => {
+  const handle = async (response: HsResponse) => {
     if (response.status === 200) {
       setError(null);
       
@@ -69,7 +71,7 @@ export default function HiderSeekerPage() {
       } else {
         setLines([]);
       }
-    } else if (response.body?.error === "STALE_REVISION") {
+    } else if (isStaleRevision(response)) {
       setError(`The match moved on to revision ${response.body.revision}. Check the new state and resubmit.`);
     } else {
       setError(response.body?.message ?? `Request failed (${response.status})`);
@@ -83,7 +85,7 @@ export default function HiderSeekerPage() {
   }
 
   if (match === null) {
-    return <div>{error ?? "Loading..."}</div>;
+    return <div style={{ padding: 16 }}>{error ?? "Loading..."}</div>;
   }
 
   const mode = pageMode(match, account);
@@ -92,7 +94,7 @@ export default function HiderSeekerPage() {
     const isJoined = match.hiders.some((hider: any) => hider.account === account);
     
     return (
-      <div>
+      <div style={{ padding: 16 }}>
         <h1>Match {matchId} (lobby)</h1>
         <ul>
           {match.hiders.map((hider: any, index: number) => (
@@ -101,13 +103,13 @@ export default function HiderSeekerPage() {
         </ul>
         
         {!isJoined && (
-          <button onClick={() => handle(client.joinMatch(matchId, account, match.revision))}>
+          <button onClick={async () => handle(await client.joinMatch(matchId, account, match.revision))}>
             Join
           </button>
         )}
         
         {match.host === account && (
-          <button onClick={() => handle(client.startMatch(matchId, account, match.revision))}>
+          <button onClick={async () => handle(await client.startMatch(matchId, account, match.revision))}>
             Start
           </button>
         )}
@@ -119,7 +121,7 @@ export default function HiderSeekerPage() {
 
   if (mode === "NOT_A_HIDER") {
     return (
-      <div>
+      <div style={{ padding: 16 }}>
         Match {matchId} is {match.phase}. You are not a hider in it.
       </div>
     );
@@ -193,7 +195,7 @@ export default function HiderSeekerPage() {
             {move.queue_position}, {move.intent_id}, hider {move.hider_id}, {move.action}
             {move.server_id !== null && ` on server ${move.server_id}`}
             {ownPending.includes(move) && (
-              <button onClick={() => handle(client.cancelMove(matchId, account, view.revision, move.intent_id))}>
+              <button onClick={async () => handle(await client.cancelMove(matchId, account, view.revision, move.intent_id))}>
                 Cancel
               </button>
             )}
@@ -218,13 +220,13 @@ export default function HiderSeekerPage() {
                 <tr key={option.label}>
                   <td>{option.label}</td>
                   <td>
-                    <button onClick={() => handle(client.submitMove(matchId, account, view.revision, "PLAY", option.intent))}>
+                    <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "PLAY", option.intent))}>
                       Play
                     </button>
                   </td>
                   <td>{previewMove(view, option.intent.type, "PLAY").summary}</td>
                   <td>
-                    <button onClick={() => handle(client.submitMove(matchId, account, view.revision, "QUEUE", option.intent))}>
+                    <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "QUEUE", option.intent))}>
                       Queue
                     </button>
                   </td>
@@ -244,7 +246,7 @@ export default function HiderSeekerPage() {
                 onChange={(e) => setPassTicks(parseInt(e.target.value) || 1)}
               />
             </label>
-            <button onClick={() => handle(client.passTicks(matchId, account, view.revision, passTicks))}>
+            <button onClick={async () => handle(await client.passTicks(matchId, account, view.revision, passTicks))}>
               Pass
             </button>
             <p>{previewPass(passTicks).summary}</p>
