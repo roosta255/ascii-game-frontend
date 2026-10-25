@@ -1,6 +1,7 @@
 // What the hider page lists from one hider view: the moves the player can
-// pick, their own cancellable pending moves, and each goal as text. Only a
-// move's shape comes from here; the backend decides whether it is legal.
+// pick, their own cancellable pending moves, and each goal as text.
+//
+// Only a move's shape comes from here; the backend decides whether it is legal.
 // Nothing here ranks servers or suggests targets (design doc section 3.5).
 
 export interface MoveOption {
