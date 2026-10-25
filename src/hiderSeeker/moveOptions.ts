@@ -11,10 +11,8 @@ export interface MoveOption {
 // Hider actions that apply to the server the hider is connected to.
 export const SERVER_ACTIONS = ["CONFIGURE_SERVER", "SUPPRESS_ERROR", "BOOST_CPU", "ROTATE_ROUTE", "PAY_GOAL"];
 
-/** 
- * Connection moves first, then the connected server's actions, then
- * ADD_SERVER, then REMOVE_SERVER for each active server.
- */
+// Connection moves first, then the connected server's actions, then
+// ADD_SERVER, then REMOVE_SERVER for each active server.
 export function buildMoveOptions(view: any): MoveOption[] {
   const options: MoveOption[] = [];
   
@@ -60,16 +58,12 @@ export function buildMoveOptions(view: any): MoveOption[] {
   return options;
 }
 
-/** 
- * The view's pending moves whose hider_id is the viewing hider's.
- */
+// The view's pending moves whose hider_id is the viewing hider's.
 export function ownPendingMoves(view: any): any[] {
   return view.pending.filter((move: any) => move.hider_id === view.self.hider_id);
 }
 
-/** 
- * "Goal <id> (<status>, reward <amount>): <requirement>; <requirement>"
- */
+// "Goal <id> (<status>, reward <amount>): <requirement>; <requirement>"
 export function goalText(goal: any): string {
   const requirements = goal.requirements.map((req: any) => {
     if (req.type === "SERVER_METRIC_THRESHOLD") {
