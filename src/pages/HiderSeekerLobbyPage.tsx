@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 
+// /hs: create a hider‑seeker match, or open one by its id.
 export default function HiderSeekerLobbyPage() {
   const [hiderCount, setHiderCount] = useState<number>(2);
   const [npcHiders, setNpcHiders] = useState<number>(1);
