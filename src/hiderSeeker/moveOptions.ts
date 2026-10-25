@@ -8,18 +8,11 @@ export interface MoveOption {
 // Hider actions that apply to the server the hider is connected to.
 export const SERVER_ACTIONS = ["CONFIGURE_SERVER", "SUPPRESS_ERROR", "BOOST_CPU", "ROTATE_ROUTE", "PAY_GOAL"];
 
-/**
- * **`buildMoveOptions(view)`**, in this order:
- * 1. While `view.self.server_id` is null: for each server in
- *    `view.servers`, `{ label: `Connect to server ${id}`, intent: { type: "CONNECT", server_id: id } }`.
- *    While connected to server `s`: first
- *    `{ label: `Disconnect from server ${s}`, intent: { type: "DISCONNECT" } }`,
- *    then for each `type` of `SERVER_ACTIONS`, in order,
- *    `{ label: `${type} on server ${s}`, intent: { type } }`.
- * 2. `{ label: "Add a server (1 LOA)", intent: { type: "ADD_SERVER" } }`.
- * 3. For each server in `view.servers`,
- *    `{ label: `Remove server ${id}`, intent: { type: "REMOVE_SERVER", server_id: id } }`.
- */
+// Builds the list of moves the player can pick, in this order:
+// 1. While disconnected: connect options for each server.
+//    While connected: disconnect option first, then server actions in SERVER_ACTIONS order.
+// 2. Add a server (1 LOA) option.
+// 3. Remove server options for each server.
 export function buildMoveOptions(view: any): MoveOption[] {
   const options: MoveOption[] = [];
   
@@ -65,23 +58,12 @@ export function buildMoveOptions(view: any): MoveOption[] {
   return options;
 }
 
-/**
- * **`ownPendingMoves(view)`**: the entries of `view.pending` whose
- * `hider_id` equals `view.self.hider_id`, in order (the same objects, not
- * copies).
- */
+// Returns the player's own pending moves from the view, in order.
 export function ownPendingMoves(view: any): any[] {
   return view.pending.filter((move: any) => move.hider_id === view.self.hider_id);
 }
 
-/**
- * **`goalText(goal)`**:
- * `` `Goal ${goal_id} (${status}, reward ${reward_amount}): ${requirements}` ``,
- * where `requirements` is each requirement's text joined with `"; "`:
- * - `"SERVER_METRIC_THRESHOLD"`: `` `server ${server_id} ${metric} >= ${threshold}` ``
- * - `"ACTIVE_SERVER_COUNT"`: `` `at least ${threshold} active servers` ``
- * - any other type: `` `${type} ${threshold}` ``
- */
+// Formats a goal's requirements into human-readable text.
 export function goalText(goal: any): string {
   const requirements = goal.requirements.map((req: any) => {
     if (req.type === "SERVER_METRIC_THRESHOLD") {
