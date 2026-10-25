@@ -25,6 +25,16 @@ export interface HsClient {
   cancelMove(matchId: string, account: string, expectedRevision: number, intentId: string): Promise<HsResponse>;
 }
 
+// Reads a fetch Response into an HsResponse.
+async function toHsResponse(response: Response): Promise<HsResponse> {
+  const text = await response.text();
+  return {
+    status: response.status,
+    body: text === "" ? null : JSON.parse(text),
+    etag: response.headers.get("ETag") ?? null,
+  };
+}
+
 /**
  * apiBase is the API_BASE global; newKey makes one idempotency key per request
  */
@@ -38,28 +48,12 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async getMatch(matchId) {
       const url = `${apiBase}/api/v1/matches/${encodeURIComponent(matchId)}`;
-      const response = await fetchFn(url);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url));
     },
 
     async joinMatch(matchId, account, expectedRevision) {
@@ -71,15 +65,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async startMatch(matchId, account, expectedRevision) {
@@ -91,15 +77,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async getHiderView(matchId, account, etag) {
@@ -108,15 +86,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
       if (etag !== null) {
         init.headers = { "If-None-Match": etag };
       }
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const responseEtag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag: responseEtag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async submitMove(matchId, account, expectedRevision, playMode, intent) {
@@ -134,15 +104,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async passTicks(matchId, account, expectedRevision, ticks) {
@@ -161,15 +123,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     },
 
     async cancelMove(matchId, account, expectedRevision, intentId) {
@@ -185,15 +139,7 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       };
-      const response = await fetchFn(url, init);
-      const text = await response.text();
-      const body = text === "" ? null : JSON.parse(text);
-      const etag = response.headers.get("ETag") ?? null;
-      return {
-        status: response.status,
-        body,
-        etag
-      };
+      return toHsResponse(await fetchFn(url, init));
     }
   };
 
