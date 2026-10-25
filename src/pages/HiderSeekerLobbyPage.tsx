@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createHsClient } from "../hiderSeeker/hsApi";
+import { useAuth } from "../AuthContext";
 
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 
@@ -10,10 +11,11 @@ export default function HiderSeekerLobbyPage() {
   const [matchId, setMatchId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { account } = useAuth();
 
   const handleCreate = async () => {
     const seed = Math.floor(Math.random() * 1000000);
-    const response = await client.createMatch("alice", hiderCount, npcHiders, seed);
+    const response = await client.createMatch(account!, hiderCount, npcHiders, seed);
     
     if (response.status === 201) {
       navigate(`/hs/${response.body.match_id}`);
