@@ -33,10 +33,10 @@ export default function HiderSeekerLobbyPage() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1>Hider-Seeker</h1>
+      <h2>Hider-Seeker</h2>
       
       <div>
-        <h2>Create a new match</h2>
+        <h3>Create a new match</h3>
         <div>
           <label>
             Hiders: 
@@ -67,7 +67,7 @@ export default function HiderSeekerLobbyPage() {
       </div>
       
       <div>
-        <h2>Open an existing match</h2>
+        <h3>Open an existing match</h3>
         <div>
           <label>
             Match ID: 

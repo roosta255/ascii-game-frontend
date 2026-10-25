@@ -4,7 +4,8 @@ import { useAuth } from "../AuthContext";
 import { createHsClient, isStaleRevision, HsResponse } from "../hiderSeeker/hsApi";
 import { pageMode } from "../hiderSeeker/pageMode";
 import { previewMove, previewPass, describeMoveResult, MAX_ADVANCE_TICKS } from "../hiderSeeker/turnPreview";
-import { buildMoveOptions, ownPendingMoves, goalText } from "../hiderSeeker/moveOptions";
+import { buildMoveOptions, ownPendingMoves, goalText, MoveOption } from "../hiderSeeker/moveOptions";
+import { METRIC_ORDER, matchSummary, selfSummary, teammateSummary, pendingSummary } from "../hiderSeeker/viewText";
 
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 const POLL_MS = 3000;
@@ -95,7 +96,8 @@ export default function HiderSeekerPage() {
     
     return (
       <div style={{ padding: 16 }}>
-        <h1>Match {matchId} (lobby)</h1>
+        <h2>Hider‑Seeker</h2>
+        <p>Match {matchId}, lobby</p>
         <ul>
           {match.hiders.map((hider: any, index: number) => (
             <li key={index}>Hider {hider.hider_id}: {hider.account ?? "open"}</li>
@@ -129,71 +131,65 @@ export default function HiderSeekerPage() {
 
   // mode === "PLAY"
   if (view === null) {
-    return <div>Loading view...</div>;
+    return <div style={{ padding: 16 }}>Loading view...</div>;
   }
 
   const ownPending = ownPendingMoves(view);
   
   return (
-    <div style={{ padding: 16, fontFamily: "monospace" }}>
-      <h1>Match {matchId}: {view.phase}, tick {view.tick}, revision {view.revision}</h1>
-      
+    <div style={{ padding: 16 }}>
+      <h2>Hider‑Seeker</h2>
+      <p>{matchSummary(view)}</p>
       {view.winner && <p>Winner: {view.winner}</p>}
       
       <p>Team reward {view.team_reward} / {view.reward_target}. Team connections left: {view.team_connections}.</p>
       
-      <p>
-        Hider {view.self.hider_id}: {view.self.status}, 
-        AP: {view.self.action_points}, LOA: {view.self.loa}, 
-        {view.self.server_id === null ? "disconnected" : `on server ${view.self.server_id}`}
-      </p>
+      <p>You: {selfSummary(view)}</p>
       
-      <h2>Team</h2>
+      <h3>Team</h3>
       <ul>
-        {view.team.map((member: any) => (
-          <li key={member.hider_id}>
-            Hider {member.hider_id}: {member.account ?? "open"}, 
-            {member.status}, 
-            {member.server_id === null ? "disconnected" : `on server ${member.server_id}`}
-          </li>
+        {view.team.map((mate: any) => (
+          <li key={mate.hider_id}>{teammateSummary(mate)}</li>
         ))}
       </ul>
       
-      <h2>Servers</h2>
-      <table border={1}>
-        <thead>
-          <tr>
-            <th>server</th>
-            {Object.keys(view.servers[0]?.metrics || {}).map(key => (
-              <th key={key}>{key}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {view.servers.map((server: any) => (
-            <tr key={server.server_id}>
-              <td>{server.server_id}</td>
-              {Object.keys(view.servers[0]?.metrics || {}).map(key => (
-                <td key={key}>{String(server.metrics[key])}</td>
+      <h3>Servers</h3>
+      <div style={{ overflowX: "auto" }}>
+        <table border={1} cellPadding={4}>
+          <thead>
+            <tr>
+              <th>server</th>
+              {METRIC_ORDER.map((metric) => (
+                <th key={metric}>{metric}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {view.servers.map((server: any) => (
+              <tr key={server.server_id}>
+                <td>{server.server_id}</td>
+                {METRIC_ORDER.map((metric) => (
+                  <td key={metric}>{String(server.metrics[metric])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       
-      <h2>Goals</h2>
+      <h3>Goals</h3>
       <ul>
         {view.goals.map((goal: any) => (
           <li key={goal.goal_id}>{goalText(goal)}</li>
         ))}
       </ul>
       
-      <h2>Pending moves</h2>
+      <h3>Pending moves</h3>
+      {view.pending.length === 0 && <p>None.</p>}
       <ul>
         {view.pending.map((move: any) => (
           <li key={move.intent_id}>
-            {move.queue_position}, {move.intent_id}, hider {move.hider_id}, {move.action}
-            {move.server_id !== null && ` on server ${move.server_id}`}
+            {pendingSummary(move, view.self.hider_id)}{" "}
             {ownPending.includes(move) && (
               <button onClick={async () => handle(await client.cancelMove(matchId, account, view.revision, move.intent_id))}>
                 Cancel
@@ -203,64 +199,58 @@ export default function HiderSeekerPage() {
         ))}
       </ul>
       
+      {lines.length > 0 && (<ul>{lines.map((line, index) => <li key={index}>{line}</li>)}</ul>)}
+      
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      
       {view.phase === "ACTIVE" && view.self.status === "ACTIVE" && (
         <>
-          <h2>Moves</h2>
-          <table border={1}>
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Action</th>
-                <th>Preview</th>
-                <th>Queue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {buildMoveOptions(view).map((option: any) => (
-                <tr key={option.label}>
-                  <td>{option.label}</td>
-                  <td>
-                    <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "PLAY", option.intent))}>
-                      Play
-                    </button>
-                  </td>
-                  <td>{previewMove(view, option.intent.type, "PLAY").summary}</td>
-                  <td>
-                    <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "QUEUE", option.intent))}>
-                      Queue
-                    </button>
-                  </td>
+          <h3>Moves</h3>
+          <div style={{ overflowX: "auto" }}>
+            <table border={1} cellPadding={4}>
+              <thead>
+                <tr>
+                  <th>Move</th>
+                  <th>If played now</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {buildMoveOptions(view).map((option: MoveOption) => (
+                  <tr key={option.label}>
+                    <td>{option.label}</td>
+                    <td>{previewMove(view, option.intent.type, "PLAY").summary}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "PLAY", option.intent))}>
+                        Play
+                      </button>{" "}
+                      <button onClick={async () => handle(await client.submitMove(matchId, account, view.revision, "QUEUE", option.intent))}>
+                        Queue
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           
-          <div>
-            <label>
-              Pass ticks: 
-              <input
-                type="number"
-                min={1}
-                max={MAX_ADVANCE_TICKS}
-                value={passTicks}
-                onChange={(e) => setPassTicks(parseInt(e.target.value) || 1)}
-              />
-            </label>
+          <p>
+            <label>Pass </label>
+            <input
+              type="number"
+              min={1}
+              max={MAX_ADVANCE_TICKS}
+              value={passTicks}
+              onChange={(e) => setPassTicks(parseInt(e.target.value) || 1)}
+            />
+            {" "}ticks{" "}
             <button onClick={async () => handle(await client.passTicks(matchId, account, view.revision, passTicks))}>
               Pass
             </button>
-            <p>{previewPass(passTicks).summary}</p>
-          </div>
+            {" "}{previewPass(passTicks).summary}
+          </p>
         </>
       )}
-      
-      <ul>
-        {lines.map((line, index) => (
-          <li key={index}>{line}</li>
-        ))}
-      </ul>
-      
-      {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
   );
 }
