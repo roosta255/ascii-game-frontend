@@ -7,6 +7,8 @@ import LoginPage from "./pages/LoginPage";
 import LobbyPage from "./pages/LobbyPage";
 import MatchPage from "./pages/MatchPage";
 import JoinMatchPage from "./pages/JoinMatchPage";
+import HiderSeekerLobbyPage from "./pages/HiderSeekerLobbyPage";
+import HiderSeekerPage from "./pages/HiderSeekerPage";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { account } = useAuth();
@@ -19,6 +21,8 @@ export default function App() {
       <Route path="/login" element={<LoginPageWrapper />} />
       <Route path="/" element={<ProtectedRoute><ErrorBoundary><LobbyPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="/match/:id" element={<ProtectedRoute><MatchPage /></ProtectedRoute>} />
+      <Route path="/hs" element={<ProtectedRoute><ErrorBoundary><HiderSeekerLobbyPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/hs/:matchId" element={<ProtectedRoute><ErrorBoundary><HiderSeekerPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
