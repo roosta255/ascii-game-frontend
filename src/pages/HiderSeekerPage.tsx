@@ -96,7 +96,7 @@ export default function HiderSeekerPage() {
     
     return (
       <div style={{ padding: 16 }}>
-        <h2>Hider‑Seeker</h2>
+        <h2>Hider-Seeker</h2>
         <p>Match {matchId}, lobby</p>
         <ul>
           {match.hiders.map((hider: any, index: number) => (
@@ -138,7 +138,7 @@ export default function HiderSeekerPage() {
   
   return (
     <div style={{ padding: 16 }}>
-      <h2>Hider‑Seeker</h2>
+      <h2>Hider-Seeker</h2>
       <p>{matchSummary(view)}</p>
       {view.winner && <p>Winner: {view.winner}</p>}
       
