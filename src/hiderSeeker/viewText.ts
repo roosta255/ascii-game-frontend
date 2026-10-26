@@ -50,3 +50,22 @@ export function pendingSummary(move: any, selfHiderId: number): string {
   const you = move.hider_id === selfHiderId ? ' (you)' : '';
   return `#${move.queue_position + 1} ${actionName(move.action)}${target}, hider ${move.hider_id}${you}, ${move.intent_id}`;
 }
+
+// "Hider <id> (<account or open>), <status>", for one entry of a public view's hiders.
+export function publicHiderSummary(hider: any): string {
+  return `Hider ${hider.hider_id} (${hider.account ?? "open"}), ${hider.status}`;
+}
+
+// One public event as text: "Tick 3: server added", "Tick 3: server removed", "Tick 4: seeker probed server 2, hit"; any other type is "Tick <tick>: <type>".
+export function eventText(event: any): string {
+  if (event.type === "SERVER_ADDED") {
+    return `Tick ${event.tick}: server added`;
+  }
+  if (event.type === "SERVER_REMOVED") {
+    return `Tick ${event.tick}: server removed`;
+  }
+  if (event.type === "SERVER_PROBED") {
+    return `Tick ${event.tick}: seeker probed server ${event.server_id}, ${String(event.outcome).toLowerCase()}`;
+  }
+  return `Tick ${event.tick}: ${event.type}`;
+}

@@ -7,7 +7,9 @@ import {
   matchSummary,
   selfSummary,
   teammateSummary,
-  pendingSummary
+  pendingSummary,
+  publicHiderSummary,
+  eventText
 } from './viewText';
 
 const view = {
@@ -62,5 +64,18 @@ describe('viewText', () => {
   it('pendingSummary returns correct pending move summaries', () => {
     expect(pendingSummary({ intent_id: 'mv-5', hider_id: 1, action: 'PAY_GOAL', server_id: null, queue_position: 0 }, 0)).toBe('#1 Pay goal, hider 1, mv-5');
     expect(pendingSummary({ intent_id: 'mv-6', hider_id: 0, action: 'REMOVE_SERVER', server_id: 2, queue_position: 1 }, 0)).toBe('#2 Remove server 2, hider 0 (you), mv-6');
+  });
+
+  it('publicHiderSummary returns correct public hider summaries', () => {
+    expect(publicHiderSummary({ hider_id: 1, account: 'bob', status: 'ACTIVE' })).toBe('Hider 1 (bob), ACTIVE');
+    expect(publicHiderSummary({ hider_id: 2, account: null, status: 'NOT_JOINED' })).toBe('Hider 2 (open), NOT_JOINED');
+  });
+
+  it('eventText returns correct event texts', () => {
+    expect(eventText({ type: 'SERVER_ADDED', tick: 3, revision: 7 })).toBe('Tick 3: server added');
+    expect(eventText({ type: 'SERVER_REMOVED', tick: 3, revision: 7 })).toBe('Tick 3: server removed');
+    expect(eventText({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 2, outcome: 'HIT' })).toBe('Tick 4: seeker probed server 2, hit');
+    expect(eventText({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 0, outcome: 'MISS' })).toBe('Tick 4: seeker probed server 0, miss');
+    expect(eventText({ type: 'SOMETHING_NEW', tick: 5, revision: 9 })).toBe('Tick 5: SOMETHING_NEW');
   });
 });
