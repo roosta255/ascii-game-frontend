@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { createHsClient, isStaleRevision, HsResponse } from "../hiderSeeker/hsApi";
 import { pageMode } from "../hiderSeeker/pageMode";
-import { previewMove, previewPass, describeMoveResult, MAX_ADVANCE_TICKS } from "../hiderSeeker/turnPreview";
+import { previewMove, previewPass, describeMoveResult } from "../hiderSeeker/turnPreview";
 import { buildMoveOptions, ownPendingMoves, goalText, MoveOption } from "../hiderSeeker/moveOptions";
 import { METRIC_ORDER, matchSummary, selfSummary, teammateSummary, pendingSummary } from "../hiderSeeker/viewText";
 
@@ -239,7 +239,7 @@ export default function HiderSeekerPage() {
             <input
               type="number"
               min={1}
-              max={MAX_ADVANCE_TICKS}
+              max={view.rules.max_advance_ticks}
               value={passTicks}
               onChange={(e) => setPassTicks(parseInt(e.target.value) || 1)}
             />
