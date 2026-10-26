@@ -157,6 +157,30 @@ describe('hsApi', () => {
     });
   });
 
+  describe('getPublicView', () => {
+    it('performs a GET request with optional If-None-Match header and parses the response, including the ETag header', async () => {
+      const { calls, fetchFn } = fakeFetch(200, '{"revision":3}', { ETag: '"abc"' });
+      
+      const result = await client(fetchFn).getPublicView('m1', null);
+      
+      expect(calls[0].url).toBe('http://api/api/v1/matches/m1/views/public/latest');
+      expect(result).toEqual({
+        status: 200,
+        body: { revision: 3 },
+        etag: '"abc"'
+      });
+    });
+
+    it('includes If-None-Match header when etag is provided', async () => {
+      const { calls, fetchFn } = fakeFetch(304, null, { ETag: '"abc"' });
+      
+      await client(fetchFn).getPublicView('m1', '"abc"');
+      
+      expect((calls[0].init?.headers as Record<string, string>)['If-None-Match']).toBe('"abc"');
+      expect(calls[0].url).toBe('http://api/api/v1/matches/m1/views/public/latest');
+    });
+  });
+
   describe('isStaleRevision', () => {
     it('correctly identifies stale-revision responses', () => {
       expect(isStaleRevision({ status: 409, body: { error: 'STALE_REVISION', revision: 7 }, etag: null })).toBe(true);

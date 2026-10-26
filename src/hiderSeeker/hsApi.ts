@@ -20,6 +20,7 @@ export interface HsClient {
   joinMatch(matchId: string, account: string, expectedRevision: number): Promise<HsResponse>;
   startMatch(matchId: string, account: string, expectedRevision: number): Promise<HsResponse>;
   getHiderView(matchId: string, account: string, etag: string | null): Promise<HsResponse>;
+  getPublicView(matchId: string, etag: string | null): Promise<HsResponse>;
   submitMove(matchId: string, account: string, expectedRevision: number, playMode: PlayMode, intent: object): Promise<HsResponse>;
   passTicks(matchId: string, account: string, expectedRevision: number, ticks: number): Promise<HsResponse>;
   cancelMove(matchId: string, account: string, expectedRevision: number, intentId: string): Promise<HsResponse>;
@@ -82,6 +83,15 @@ export function createHsClient(apiBase: string, fetchFn: FetchFn, newKey: () => 
 
     async getHiderView(matchId, account, etag) {
       const url = `${apiBase}/api/v1/matches/${encodeURIComponent(matchId)}/views/hider/latest?account=${encodeURIComponent(account)}`;
+      const init: RequestInit = {};
+      if (etag !== null) {
+        init.headers = { "If-None-Match": etag };
+      }
+      return toHsResponse(await fetchFn(url, init));
+    },
+
+    async getPublicView(matchId, etag) {
+      const url = `${apiBase}/api/v1/matches/${encodeURIComponent(matchId)}/views/public/latest`;
       const init: RequestInit = {};
       if (etag !== null) {
         init.headers = { "If-None-Match": etag };
