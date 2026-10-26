@@ -1,49 +1,35 @@
-// Computes turn previews from the public ruleset (how many ticks a move advances before it applies, design
-// doc section 3.2) and a readable summary of a move response.
-// The constants mirror the backend's placeholder values (pending BALANCE-001):
-// HiderAction.enum's AP costs, regeneration.hpp's regen and cap, and state.hpp's MAX_ADVANCE_TICKS,
-// so they change together.
-
-export const AP_REGEN_PER_TICK = 2;
-export const AP_CAP = 10;
-export const MAX_ADVANCE_TICKS = 16;
-
-// AP cost per intent type, in HiderAction.enum order.
-export const ACTION_AP_COSTS: Record<string, number> = {
-  ADD_SERVER: 0,
-  REMOVE_SERVER: 0,
-  CONFIGURE_SERVER: 5,
-  SUPPRESS_ERROR: 3,
-  BOOST_CPU: 2,
-  ROTATE_ROUTE: 4,
-  PAY_GOAL: 10,
-  CONNECT: 0,
-  DISCONNECT: 0
-};
+// Computes turn previews from the hider view's rules (how many ticks a move advances before it applies, design doc section 3.2) and a readable summary of a move response.
+export interface HsRules {
+  ap_regen_per_tick: number;
+  ap_cap: number;
+  max_advance_ticks: number;
+  action_ap_costs: Record<string, number>;
+}
 
 /**
  * Calculates how many ticks are needed to afford a given AP cost.
  * 
  * @param actionPoints - Current action points
  * @param apCost - Cost of the action in AP
- * @returns Number of ticks needed, or null if unaffordable within MAX_ADVANCE_TICKS
+ * @param rules - The hider view's rules
+ * @returns Number of ticks needed, or null if unaffordable within max_advance_ticks
  */
-export function ticksToAfford(actionPoints: number, apCost: number): number | null {
+export function ticksToAfford(actionPoints: number, apCost: number, rules: HsRules): number | null {
   // If we already have enough AP, no ticks needed
   if (actionPoints >= apCost) {
     return 0;
   }
   
   // If the cost exceeds the cap, it's impossible to afford
-  if (apCost > AP_CAP) {
+  if (apCost > rules.ap_cap) {
     return null;
   }
   
   // Calculate ticks needed using ceiling division
-  const ticksNeeded = Math.ceil((apCost - actionPoints) / AP_REGEN_PER_TICK);
+  const ticksNeeded = Math.ceil((apCost - actionPoints) / rules.ap_regen_per_tick);
   
-  // Return null if it would take more than MAX_ADVANCE_TICKS
-  if (ticksNeeded > MAX_ADVANCE_TICKS) {
+  // Return null if it would take more than max_advance_ticks
+  if (ticksNeeded > rules.max_advance_ticks) {
     return null;
   }
   
@@ -78,22 +64,22 @@ export interface MovePreview {
  * @returns Move preview with ticks and summary
  */
 export function previewMove(view: any, intentType: string, playMode: "PLAY" | "QUEUE"): MovePreview {
-  // Determine cost from ACTION_AP_COSTS, defaulting to 0 if not found
-  const cost = ACTION_AP_COSTS[intentType] ?? 0;
+  // Determine cost from the view's rules, defaulting to 0 if not found
+  const cost = view.rules.action_ap_costs[intentType] ?? 0;
   
   // Special case for ADD_SERVER - it requires 1 LOA
   let ticks: number | null;
   if (intentType === 'ADD_SERVER' && view.self.loa < 1) {
     ticks = null;
   } else {
-    ticks = ticksToAfford(view.self.action_points, cost);
+    ticks = ticksToAfford(view.self.action_points, cost, view.rules);
   }
   
   // Build summary based on ticks and play mode
   if (ticks === null) {
     return {
       ticks: null,
-      summary: `Never affordable within ${MAX_ADVANCE_TICKS} ticks.`
+      summary: `Never affordable within ${view.rules.max_advance_ticks} ticks.`
     };
   } else if (ticks === 0) {
     return {
