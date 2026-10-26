@@ -5,7 +5,15 @@ import { createHsClient, isStaleRevision, HsResponse } from "../hiderSeeker/hsAp
 import { pageMode } from "../hiderSeeker/pageMode";
 import { previewMove, previewPass, describeMoveResult } from "../hiderSeeker/turnPreview";
 import { buildMoveOptions, ownPendingMoves, goalText, MoveOption } from "../hiderSeeker/moveOptions";
-import { METRIC_ORDER, matchSummary, selfSummary, teammateSummary, pendingSummary } from "../hiderSeeker/viewText";
+import {
+  matchSummary,
+  selfSummary,
+  teammateSummary,
+  pendingSummary,
+  publicHiderSummary,
+  eventText
+} from "../hiderSeeker/viewText";
+import ServerTable from "../hiderSeeker/ServerTable";
 
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 const POLL_MS = 3000;
@@ -21,6 +29,8 @@ export default function HiderSeekerPage() {
   const [error, setError] = useState<string | null>(null);
   const [passTicks, setPassTicks] = useState<number>(1);
   const etag = useRef<string | null>(null);
+  const [publicView, setPublicView] = useState<any>(null);
+  const publicEtag = useRef<string | null>(null);
 
   const refresh = async () => {
     if (!matchId || !account) {
@@ -45,6 +55,15 @@ export default function HiderSeekerPage() {
         setView(viewResponse.body);
       } else if (viewResponse.status !== 304) {
         // For any other error status, we don't update the view
+      }
+    } else {
+      // A spectator polls the public view the same way.
+      if (pageMode(response.body, account) === "NOT_A_HIDER") {
+        const publicResponse = await client.getPublicView(matchId, publicEtag.current);
+        if (publicResponse.status === 200) {
+          publicEtag.current = publicResponse.etag;
+          setPublicView(publicResponse.body);
+        }
       }
     }
   };
@@ -122,9 +141,34 @@ export default function HiderSeekerPage() {
   }
 
   if (mode === "NOT_A_HIDER") {
+    if (publicView === null) {
+      return <div style={{ padding: 16 }}>Loading view...</div>;
+    }
+
     return (
       <div style={{ padding: 16 }}>
-        Match {matchId} is {match.phase}. You are not a hider in it.
+        <h2>Hider-Seeker</h2>
+        <p>{matchSummary(publicView)}</p>
+        <p>You are watching. You are not a hider in this match.</p>
+        {publicView.winner && <p>Winner: {publicView.winner}</p>}
+
+        <h3>Hiders</h3>
+        <ul>
+          {publicView.hiders.map((hider: any) => (
+            <li key={hider.hider_id}>{publicHiderSummary(hider)}</li>
+          ))}
+        </ul>
+
+        <h3>Servers</h3>
+        <ServerTable servers={publicView.servers} />
+
+        <h3>Events</h3>
+        {publicView.events.length === 0 && <p>None.</p>}
+        <ul>
+          {[...publicView.events].reverse().map((event: any, index: number) => (
+            <li key={index}>{eventText(event)}</li>
+          ))}
+        </ul>
       </div>
     );
   }
@@ -154,28 +198,7 @@ export default function HiderSeekerPage() {
       </ul>
       
       <h3>Servers</h3>
-      <div style={{ overflowX: "auto" }}>
-        <table border={1} cellPadding={4}>
-          <thead>
-            <tr>
-              <th>server</th>
-              {METRIC_ORDER.map((metric) => (
-                <th key={metric}>{metric}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {view.servers.map((server: any) => (
-              <tr key={server.server_id}>
-                <td>{server.server_id}</td>
-                {METRIC_ORDER.map((metric) => (
-                  <td key={metric}>{String(server.metrics[metric])}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ServerTable servers={view.servers} />
       
       <h3>Goals</h3>
       <ul>
