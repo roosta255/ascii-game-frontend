@@ -1,7 +1,4 @@
-// Computes turn previews from the hider view's rules (how many ticks a move advances before it applies,
-// design doc section 3.2) and a readable summary of a move response.
-// The hider view's rules object, sent by the backend: AP regeneration per tick, the AP cap,
-// the most ticks one move may advance, and the AP cost per intent type.
+// Computes turn previews from the hider view's rules (how many ticks a move advances before it applies, design doc section 3.2) and a readable summary of a move response.
 export interface HsRules {
   ap_regen_per_tick: number;
   ap_cap: number;
