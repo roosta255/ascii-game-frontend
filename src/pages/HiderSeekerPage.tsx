@@ -10,10 +10,10 @@ import {
   selfSummary,
   teammateSummary,
   pendingSummary,
-  publicHiderSummary,
-  eventText
+  publicHiderSummary
 } from "../hiderSeeker/viewText";
 import ServerTable from "../hiderSeeker/ServerTable";
+import EventList from "../hiderSeeker/EventList";
 
 const client = createHsClient(API_BASE, (url, init) => fetch(url, init), () => crypto.randomUUID());
 const POLL_MS = 3000;
@@ -163,12 +163,7 @@ export default function HiderSeekerPage() {
         <ServerTable servers={publicView.servers} />
 
         <h3>Events</h3>
-        {publicView.events.length === 0 && <p>None.</p>}
-        <ul>
-          {[...publicView.events].reverse().map((event: any, index: number) => (
-            <li key={index}>{eventText(event)}</li>
-          ))}
-        </ul>
+        <EventList events={publicView.events} />
       </div>
     );
   }
@@ -274,6 +269,9 @@ export default function HiderSeekerPage() {
           </p>
         </>
       )}
+      
+      <h3>Events</h3>
+      <EventList events={view.events} />
     </div>
   );
 }
