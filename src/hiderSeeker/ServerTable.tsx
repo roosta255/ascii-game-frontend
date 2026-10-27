@@ -1,7 +1,7 @@
 import { METRIC_ORDER } from "./viewText";
 import Sparkline from "./Sparkline";
 
-// A view's servers as a table: one row per active server, one column per metric in METRIC_ORDER, each with its history as a sparkline.
+// A view's servers as a table: one row per active server, one column per metric in METRIC_ORDER, each with its history and current value as a sparkline.
 export default function ServerTable({ servers }: { servers: any[] }) {
   return (
     <div style={{ overflowX: "auto" }}>
@@ -23,7 +23,7 @@ export default function ServerTable({ servers }: { servers: any[] }) {
                   {String(server.metrics[metric])}
                   {server.history && (
                     <Sparkline
-                      values={server.history.map((frame: any) => frame[metric])}
+                      values={[...server.history.map((frame: any) => frame[metric]), server.metrics[metric]]}
                       label={`server ${server.server_id} ${metric} history`}
                     />
                   )}
