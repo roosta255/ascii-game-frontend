@@ -1,4 +1,5 @@
 import { DrawerProps, rebuildGlyphs } from '../types/DrawerProps';
+import { TimeRef } from '../types/TimeRef';
 import { AnimatedCharacter } from '../types/AnimatedCharacter';
 import { AnimationFlyweight } from '../assets/Painter';
 import { RoomProps } from '../types/RoomProps';
@@ -16,7 +17,7 @@ export interface DrawChestProps {
   builderOffset: number;
   BUILDER_ID: number;
   predictedStatsRef: { current: Keyframe[] };
-  times: { serverToClientOffset: number; fetchTime: number };
+  times: TimeRef;
   refreshMatch: () => Promise<void>;
   animationFlyweights: Record<string, AnimationFlyweight>;
   animationTime: number;

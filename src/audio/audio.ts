@@ -13,7 +13,7 @@ export class ChipSynth {
     async resume() {
         if (this.ready) {
             if (this.ctx?.state !== "running") {
-                await this.ctx.resume();
+                await this.ctx?.resume();
             }
             return;
         }

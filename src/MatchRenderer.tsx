@@ -906,7 +906,7 @@ export default function MatchRenderer({ match, viewedRoomId, setViewedRoomId, ti
       // if (cell.offset == 168) {
       //   console.log("Drawing role: ", character.role);
       // }
-      rolePainter.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick}});
+      rolePainter!.draw(character.role, {globals, locals: {coords: [drawX, drawY], onClick}});
     }
 
     globals.painters.backgrounds.draw(room.type, {globals, locals: {coords: [roomX, roomY], room}});

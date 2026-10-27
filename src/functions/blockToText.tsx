@@ -1,4 +1,5 @@
 
+import type { JSX } from "react";
 import { AsciiGlyph, isTransparent } from "../types/AsciiGlyph";
 
 function intToCssColor(color: number): string {

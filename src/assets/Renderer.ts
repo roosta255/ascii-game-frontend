@@ -13,6 +13,7 @@ export type Renderer =
     | { type: "BackgroundRenderer"; sprite: string; palette: number }
     | { type: "CharacterRenderer"; sprite: string; palette: number; eyes?: number }
     | { type: "DirectionalIconRenderer"; directions: DirectionalIconRendererEntry[] }
+    | { type: "DoorRenderer"; directions: DirectionalIconRendererEntry[] }
     | { type: "DoorwayRenderer"; sprite: string }
     | { type: "SpriteRenderer"; sprite: string; palette: number }
     | { type: "AnimatedSpriteRenderer"; animation: string; looping: boolean; palette: number }

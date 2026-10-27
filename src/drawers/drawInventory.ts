@@ -1,4 +1,5 @@
 import { DrawerProps } from '../types/DrawerProps';
+import { TimeRef } from '../types/TimeRef';
 import { calculatePosition, GridCalculator } from '../types/GridCalculator';
 import { Keyframe, predictedActionsRemaining, createActionDecrementPrediction } from '../types/Keyframe';
 import { getSynth } from '../audio/index';
@@ -12,7 +13,7 @@ export interface DrawInventoryProps {
   builderOffset: number;
   BUILDER_ID: number;
   predictedStatsRef: { current: Keyframe[] };
-  times: { serverToClientOffset: number; fetchTime: number };
+  times: TimeRef;
   refreshMatch: () => Promise<void>;
 }
 

@@ -1,4 +1,5 @@
 import { DrawerProps } from '../types/DrawerProps';
+import { TimeRef } from '../types/TimeRef';
 import { RoomProps, toFloorGlyphsFromCell, toFloorGlyphsFromDoor, toFloorGlyphsFromLock } from '../types/RoomProps';
 import {
   Keyframe, isKeyframeAnimating,
@@ -17,7 +18,7 @@ export interface DrawRoomContext {
   builderOffset: number;
   BUILDER_ID: number;
   isMatchStarted: boolean;
-  times: { serverToClientOffset: number; fetchTime: number };
+  times: TimeRef;
   predictedStatsRef: { current: Keyframe[] };
   predictedMovesRef: { current: Keyframe[] };
   predictedLocationRef: { current: { type: string; data: number; t1: number } | null };

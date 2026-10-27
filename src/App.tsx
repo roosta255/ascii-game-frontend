@@ -9,6 +9,7 @@ import MatchPage from "./pages/MatchPage";
 import JoinMatchPage from "./pages/JoinMatchPage";
 import HiderSeekerLobbyPage from "./pages/HiderSeekerLobbyPage";
 import HiderSeekerPage from "./pages/HiderSeekerPage";
+import type { JSX } from "react";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { account } = useAuth();
