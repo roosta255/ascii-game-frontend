@@ -28,7 +28,7 @@ export class Texture {
   layer: AsciiGlyph[][];
   meta: TextureSpriteMeta;
   private palettes: { [key: number]: number }[] = [];
-  private sprites: { [key: string]: SpriteMeta }[] = [];
+  private sprites: { [key: string]: SpriteMeta } = {};
 
   constructor(layer: AsciiGlyph[][], meta: TextureSpriteMeta) {
     this.layer = layer;
