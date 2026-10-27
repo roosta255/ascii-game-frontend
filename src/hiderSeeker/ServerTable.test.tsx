@@ -39,11 +39,38 @@ describe('ServerTable', () => {
     
     // Should have the specific CPU sparkline with correct accessible name
     screen.getByRole('img', { 
-      name: 'server 3 cpu history: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15' 
+      name: 'server 3 cpu history: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 25' 
     });
     
     // Data row's text content is unchanged
     const rows = screen.getAllByRole('row').map((row) => row.textContent);
     expect(rows[1]).toBe('325123456');
+  });
+
+  it('ends each chart at the current value when it equals the last frame', () => {
+    const serverWithHistory = {
+      server_id: 1,
+      metrics: { cpu: 7, memory: 0, disk: 0, network: 0, heat: 0, errors: 0, users: 0 },
+      history: Array.from({ length: 16 }, (_, i) => ({
+        cpu: 7,
+        memory: 0,
+        disk: 0,
+        network: 0,
+        heat: 0,
+        errors: 0,
+        users: 0
+      }))
+    };
+    
+    render(<ServerTable servers={[serverWithHistory]} />);
+    
+    // Should have the specific CPU sparkline ending at current value
+    screen.getByRole('img', { 
+      name: 'server 1 cpu history: 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7' 
+    });
+    
+    // Data row's text content should be '17000000' (server_id 1, cpu 7, others 0)
+    const rows = screen.getAllByRole('row').map((row) => row.textContent);
+    expect(rows[1]).toBe('17000000');
   });
 });
