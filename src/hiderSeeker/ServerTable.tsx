@@ -19,7 +19,15 @@ export default function ServerTable({ servers }: { servers: any[] }) {
             <tr key={server.server_id}>
               <td>{server.server_id}</td>
               {METRIC_ORDER.map((metric) => (
-                <td key={metric}> {String(server.metrics[metric])} {server.history && ( <Sparkline values={server.history.map((frame: any) => frame[metric])} label={`server ${server.server_id} ${metric} history`} /> )} </td>
+                <td key={metric}>
+                  {String(server.metrics[metric])}
+                  {server.history && (
+                    <Sparkline
+                      values={server.history.map((frame: any) => frame[metric])}
+                      label={`server ${server.server_id} ${metric} history`}
+                    />
+                  )}
+                </td>
               ))}
             </tr>
           ))}
