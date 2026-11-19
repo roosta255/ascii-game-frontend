@@ -8,7 +8,28 @@ describe('ServerTable', () => {
   it('renders a header row and one row per server, metrics in METRIC_ORDER', () => {
     render(<ServerTable servers={[{ server_id: 0, metrics }, { server_id: 2, metrics }]} />);
     const rows = screen.getAllByRole('row').map((row) => row.textContent);
-    expect(rows).toEqual(['servercpumemorydisknetworkheaterrorsusers', '025123456', '225123456']);
+    expect(rows).toEqual(['servercpumemorydisknetworkheaterrorsuserslights', '025123456', '225123456']);
+  });
+
+  it('renders lights as H/E/S when lit and - when not', () => {
+    render(
+      <ServerTable
+        servers={[
+          { server_id: 0, metrics, lights: { heat: true, errors: false, seeker_connected: true } },
+          { server_id: 1, metrics, lights: { heat: false, errors: true, seeker_connected: false } },
+        ]}
+      />
+    );
+    expect(screen.getByLabelText('server 0 lights').textContent).toBe('H-S');
+    expect(screen.getByLabelText('server 1 lights').textContent).toBe('-E-');
+  });
+
+  it('shows "not connected" instead of metrics for a server whose metrics are hidden', () => {
+    const lights = { heat: false, errors: false, seeker_connected: true };
+    render(<ServerTable servers={[{ server_id: 4, metrics: null, history: null, lights }]} />);
+    const rows = screen.getAllByRole('row').map((row) => row.textContent);
+    expect(rows[1]).toBe('4not connected--S');
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
   });
 
   it('renders only the header row when there are no servers', () => {
