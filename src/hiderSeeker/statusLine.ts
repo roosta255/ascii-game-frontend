@@ -19,6 +19,7 @@ export function hiderStatusLine(view: {
   rules: { ap_cap: number };
   team_connections: number;
   team_connections_total: number;
+  team: Array<{ server_id: number | null }>;
 }): string {
   const { phase, tick, self, rules, team_connections, team_connections_total } = view;
   
