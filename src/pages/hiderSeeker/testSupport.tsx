@@ -1,3 +1,8 @@
+import { render } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '../../AuthContext';
+import { HsMatchRoutes } from './HsRoutes';
+
 // Answers each request with the body registered for the first matching URL fragment.
 export function stubFetch(bodies: Record<string, unknown>) {
   const fetchFn = vi.fn(async (url: string) => {
@@ -60,3 +65,17 @@ export const PUBLIC_VIEW = {
     { type: 'SERVER_PROBED', tick: 11, revision: 10, server_id: 0, outcome: 'MISS' },
   ],
 };
+
+// Renders path (for example /hs/m1/result) logged in as account.
+export function renderAt(account: string, path: string) {
+  localStorage.setItem('currentAccount', account);
+  return render(
+    <AuthProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/hs/:matchId/*" element={<HsMatchRoutes />} />
+        </Routes>
+      </MemoryRouter>
+    </AuthProvider>
+  );
+}
