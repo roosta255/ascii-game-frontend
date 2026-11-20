@@ -3,8 +3,18 @@ import { Outlet, Link } from "react-router-dom";
 import { hiderStatusLine, spectatorStatusLine } from "../../hiderSeeker/statusLine";
 import { HsMenu } from "../../hiderSeeker/HsMenu";
 import { HsLobby } from "./HsLobby";
+import { HsMatchProvider } from "../../hiderSeeker/HsMatchContext";
 
 export function HsLayout() {
+  // This component now wraps its children in HsMatchProvider
+  return (
+    <HsMatchProvider>
+      <LayoutContent />
+    </HsMatchProvider>
+  );
+}
+
+function LayoutContent() {
   const { match, mode, error, view } = useHsMatch();
   
   if (match === null) {

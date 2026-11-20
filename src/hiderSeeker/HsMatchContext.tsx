@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { createHsClient, isStaleRevision, HsResponse } from "./hsApi";
 import { pageMode } from "./pageMode";
@@ -36,6 +36,7 @@ export function HsMatchProvider({ children }: { children: React.ReactNode }) {
   const params = useParams<{ matchId: string }>();
   const matchId = params.matchId || null;
   const { account } = useAuth();
+  const navigate = useNavigate();
   const [match, setMatch] = useState<any>(null);
   const [view, setView] = useState<any>(null);
   const [publicView, setPublicView] = useState<any>(null);
@@ -110,6 +111,10 @@ export function HsMatchProvider({ children }: { children: React.ReactNode }) {
     setResultFrom(from);
     const response = await request();
     await handle(response);
+    // Navigate to result page after handling the response
+    if (matchId) {
+      navigate(`/hs/${matchId}/result`);
+    }
   };
 
   useEffect(() => {
