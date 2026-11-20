@@ -1,10 +1,5 @@
-// @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '../../AuthContext';
-
 // Answers each request with the body registered for the first matching URL fragment.
-function stubFetch(bodies: Record<string, unknown>) {
+export function stubFetch(bodies: Record<string, unknown>) {
   const fetchFn = vi.fn(async (url: string) => {
     const key = Object.keys(bodies).find((fragment) => url.includes(fragment));
     return new Response(key ? JSON.stringify(bodies[key]) : '{}', { status: key ? 200 : 404 });
@@ -60,5 +55,8 @@ export const PUBLIC_VIEW = {
            { hider_id: 2, account: 'carol', status: 'CAPTURED' }],
   servers: [0, 1, 3].map((id) => ({ server_id: id, lights: off, metrics: frame(10 * id),
     history: Array.from({ length: 16 }, () => frame(10 * id)) })),
-  events: HIDER_VIEW.events,
+  events: [
+    { type: 'SERVER_ADDED', tick: 0, revision: 3 },
+    { type: 'SERVER_PROBED', tick: 11, revision: 10, server_id: 0, outcome: 'MISS' },
+  ],
 };

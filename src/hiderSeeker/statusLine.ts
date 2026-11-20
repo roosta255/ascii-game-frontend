@@ -20,6 +20,7 @@ export function hiderStatusLine(view: {
   team_connections: number;
   team_connections_total: number;
   team: Array<{ server_id: number | null }>;
+  servers: Array<{ server_id: number; lights: { seeker_connected: boolean } }>;
 }): string {
   const ap = view.self.action_points;
   const cap = view.rules.ap_cap;
@@ -29,7 +30,13 @@ export function hiderStatusLine(view: {
   const available = counts.available;
   const inUse = counts.inUse;
   
-  const status = view.self.server_id !== null ? `ON S${view.self.server_id}` : 'OFF';
+  let status = 'OFF';
+  if (view.self.server_id !== null) {
+    const server = view.servers.find(s => s.server_id === view.self.server_id);
+    if (server && server.lights.seeker_connected) {
+      status = `ON S${view.self.server_id}`;
+    }
+  }
   
   return `T${view.tick} ${view.phase} │ AP ${ap}/${cap} │ CONN ${available} free · ${inUse} in use │ LOA ${loa} │ ${status}`;
 }
