@@ -51,35 +51,39 @@ export function HsMatchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const response = await client.getMatch(matchId);
-    
-    if (response.status !== 200) {
-      setError(response.body?.message ?? `Match not found (${response.status})`);
-      return;
-    }
-    
-    setMatch(response.body);
-    setMode(pageMode(response.body, account));
-    
-    // Only fetch view if we're in PLAY mode
-    if (pageMode(response.body, account) === "PLAY") {
-      const viewResponse = await client.getHiderView(matchId, account, etag.current);
+    try {
+      const response = await client.getMatch(matchId);
       
-      if (viewResponse.status === 200) {
-        etag.current = viewResponse.etag;
-        setView(viewResponse.body);
-      } else if (viewResponse.status !== 304) {
-        // For any other error status, we don't update the view
+      if (response.status !== 200) {
+        setError(response.body?.message ?? `Match not found (${response.status})`);
+        return;
       }
-    } else {
-      // A spectator polls the public view the same way.
-      if (pageMode(response.body, account) === "NOT_A_HIDER") {
-        const publicResponse = await client.getPublicView(matchId, publicEtag.current);
-        if (publicResponse.status === 200) {
-          publicEtag.current = publicResponse.etag;
-          setPublicView(publicResponse.body);
+      
+      setMatch(response.body);
+      setMode(pageMode(response.body, account));
+      
+      // Only fetch view if we're in PLAY mode
+      if (pageMode(response.body, account) === "PLAY") {
+        const viewResponse = await client.getHiderView(matchId, account, etag.current);
+        
+        if (viewResponse.status === 200) {
+          etag.current = viewResponse.etag;
+          setView(viewResponse.body);
+        } else if (viewResponse.status !== 304) {
+          // For any other error status, we don't update the view
+        }
+      } else {
+        // A spectator polls the public view the same way.
+        if (pageMode(response.body, account) === "NOT_A_HIDER") {
+          const publicResponse = await client.getPublicView(matchId, publicEtag.current);
+          if (publicResponse.status === 200) {
+            publicEtag.current = publicResponse.etag;
+            setPublicView(publicResponse.body);
+          }
         }
       }
+    } catch (err) {
+      setError(`Error loading match data: ${err}`);
     }
   };
 

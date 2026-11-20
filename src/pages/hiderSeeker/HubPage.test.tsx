@@ -15,12 +15,12 @@ describe('HubPage', () => {
   it('HSUI-172: lobby remains unchanged for both hub and rack routes when phase is LOBBY', async () => {
     stubFetch({ '/matches/m1': { ...MATCH, phase: 'LOBBY' } });
     renderAt('alice', '/hs/m1');
-    expect(screen.getByText('Match m1, lobby')).toBeTruthy();
+    expect(await screen.findByText('Match m1, lobby')).toBeTruthy();
     expect(screen.queryAllByRole('table').length).toBe(0);
     
     // Test the rack route too
     renderAt('alice', '/hs/m1/rack');
-    expect(screen.getByText('Match m1, lobby')).toBeTruthy();
+    expect(await screen.findByText('Match m1, lobby')).toBeTruthy();
     expect(screen.queryAllByRole('table').length).toBe(0);
   });
 
@@ -28,7 +28,7 @@ describe('HubPage', () => {
     stubFetch({ '/views/hider/latest': HIDER_VIEW, '/matches/m1': MATCH });
     renderAt('alice', '/hs/m1/classic');
     // This test just verifies that it doesn't crash and renders something
-    expect(screen.getByText('Hider-Seeker')).toBeTruthy();
+    expect(await screen.findByText('Hider-Seeker')).toBeTruthy();
   });
 
   it('HSUI-174: ensure only one poll occurs when navigating from hub to result', async () => {
