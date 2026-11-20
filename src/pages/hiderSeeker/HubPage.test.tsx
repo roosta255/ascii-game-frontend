@@ -55,4 +55,13 @@ describe('HubPage', () => {
     // The fetch mock should still have only the initial two calls
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('HSUI-175: a spectator sees the watching status line and the Hub', async () => {
+    stubFetch({ '/views/public/latest': PUBLIC_VIEW, '/matches/m1': MATCH });
+    renderAt('dave', '/hs/m1');
+    expect(await screen.findByText('T17 ACTIVE │ WATCHING')).toBeTruthy();
+    expect(screen.getByText('m1, ACTIVE, tick 17, revision 11')).toBeTruthy();
+    expect(screen.queryByText(/Team reward/)).toBeNull();
+    expect(screen.queryAllByRole('table').length).toBe(0);
+  });
 });

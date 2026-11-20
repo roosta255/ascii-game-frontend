@@ -2,15 +2,18 @@ import { useHsMatch } from "../../hiderSeeker/HsMatchContext";
 import { matchSummary } from "../../hiderSeeker/viewText";
 
 export function HubPage() {
-  const { match, view, mode } = useHsMatch();
+  const { match, view, mode, publicView } = useHsMatch();
   
   if (!match) {
     return null;
   }
   
+  // Select the correct view based on mode
+  const summaryView = mode === "PLAY" ? view : publicView;
+  
   return (
     <div>
-      <p>{matchSummary(view)}</p>
+      <p>{matchSummary(summaryView)}</p>
       {match.winner && <p>Winner: {match.winner}</p>}
       
       {mode === "PLAY" && (

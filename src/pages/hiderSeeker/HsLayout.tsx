@@ -15,7 +15,7 @@ export function HsLayout() {
 }
 
 function LayoutContent() {
-  const { match, mode, error, view } = useHsMatch();
+  const { match, mode, error, view, publicView } = useHsMatch();
   
   if (match === null) {
     return <div style={{ padding: 16 }}>{error ?? "Loading..."}</div>;
@@ -29,9 +29,18 @@ function LayoutContent() {
     );
   }
   
+  // Select the correct view based on mode
+  const selectedView = mode === "PLAY" ? view : publicView;
+  
+  // If the selected view is null, render loading placeholder
+  if (selectedView === null) {
+    return <div style={{ padding: 16 }}>Loading...</div>;
+  }
+  
+  // Render status line based on mode and view
   const statusLine = mode === "PLAY" 
-    ? hiderStatusLine(view) 
-    : spectatorStatusLine(view);
+    ? hiderStatusLine(selectedView) 
+    : spectatorStatusLine(selectedView);
   
   return (
     <div style={{ padding: 16 }}>
