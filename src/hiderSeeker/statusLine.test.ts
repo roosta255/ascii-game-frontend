@@ -15,7 +15,8 @@ describe('hiderStatusLine', () => {
 
   it('generates the correct status line for a disconnected hider', () => {
     const disconnectedView = { ...HIDER_VIEW };
-    disconnectedView.self.server_id = null;
+    // Use explicit assignment to avoid type inference issues
+    (disconnectedView.self as any).server_id = null;
     // Also need to update the corresponding server's seeker_connected flag
     disconnectedView.servers[1].lights.seeker_connected = false;
     
