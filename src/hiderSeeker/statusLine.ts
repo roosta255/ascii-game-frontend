@@ -21,19 +21,17 @@ export function hiderStatusLine(view: {
   team_connections_total: number;
   team: Array<{ server_id: number | null }>;
 }): string {
-  const { phase, tick, self, rules, team_connections, team_connections_total } = view;
-  
-  const ap = self.action_points;
-  const cap = rules.ap_cap;
-  const loa = self.loa;
+  const ap = view.self.action_points;
+  const cap = view.rules.ap_cap;
+  const loa = view.self.loa;
   
   const counts = connectionCounts(view);
   const available = counts.available;
   const inUse = counts.inUse;
   
-  const status = self.server_id !== null ? `ON S${self.server_id}` : 'OFF';
+  const status = view.self.server_id !== null ? `ON S${view.self.server_id}` : 'OFF';
   
-  return `T${tick} ${phase} │ AP ${ap}/${cap} │ CONN ${available} free · ${inUse} in use │ LOA ${loa} │ ${status}`;
+  return `T${view.tick} ${view.phase} │ AP ${ap}/${cap} │ CONN ${available} free · ${inUse} in use │ LOA ${loa} │ ${status}`;
 }
 
 export function spectatorStatusLine(view: {
