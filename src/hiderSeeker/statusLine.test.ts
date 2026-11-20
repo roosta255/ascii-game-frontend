@@ -6,6 +6,18 @@ describe('connectionCounts', () => {
   it('calculates connection counts correctly', () => {
     expect(connectionCounts(HIDER_VIEW)).toEqual({ available: 4, inUse: 2, lost: 3, total: 9 });
   });
+  
+  it('HSUI-170b (lost is never negative)', () => {
+    // Create a view where team_connections equals team_connections_total
+    const view = {
+      ...HIDER_VIEW,
+      team_connections: 9,
+      team_connections_total: 9
+    };
+    
+    const counts = connectionCounts(view);
+    expect(counts.lost).toBe(0);
+  });
 });
 
 describe('hiderStatusLine', () => {
@@ -14,13 +26,24 @@ describe('hiderStatusLine', () => {
   });
 
   it('generates the correct status line for a disconnected hider', () => {
-    const disconnectedView = { ...HIDER_VIEW };
-    // Use explicit assignment to avoid type inference issues
-    (disconnectedView.self as any).server_id = null;
-    // Also need to update the corresponding server's seeker_connected flag
-    disconnectedView.servers[1].lights.seeker_connected = false;
-    
+    const disconnectedView = {
+      ...HIDER_VIEW,
+      self: { ...HIDER_VIEW.self, server_id: null },
+    };
+
     expect(hiderStatusLine(disconnectedView)).toBe('T17 ACTIVE │ AP 6/10 │ CONN 4 free · 1 in use │ LOA 1 │ OFF');
+  });
+  
+  it('HSUI-170a', () => {
+    // Create a view based on HIDER_VIEW but with seeker_connected = false
+    const view = {
+      ...HIDER_VIEW,
+      servers: HIDER_VIEW.servers.map(s => 
+        s.server_id === 1 ? { ...s, lights: { ...s.lights, seeker_connected: false } } : s
+      )
+    };
+
+    expect(hiderStatusLine(view)).toBe('T17 ACTIVE │ AP 6/10 │ CONN 4 free · 2 in use │ LOA 1 │ ON S1');
   });
 });
 
