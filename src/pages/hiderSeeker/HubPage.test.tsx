@@ -35,6 +35,9 @@ describe('HubPage', () => {
     stubFetch({ '/views/hider/latest': HIDER_VIEW, '/matches/m1': MATCH });
     renderAt('alice', '/hs/m1');
     
+    // Wait for the page to fully load and show the content
+    await screen.findByText('T17 ACTIVE │ AP 6/10 │ CONN 4 free · 2 in use │ LOA 1 │ ON S1');
+    
     // Find the "Last result" link and click it
     const lastResultLink = screen.getByRole('link', { name: 'Last result' });
     expect(lastResultLink).toBeTruthy();
