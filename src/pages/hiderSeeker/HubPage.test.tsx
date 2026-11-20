@@ -32,18 +32,27 @@ describe('HubPage', () => {
   });
 
   it('HSUI-174: ensure only one poll occurs when navigating from hub to result', async () => {
-    stubFetch({ '/views/hider/latest': HIDER_VIEW, '/matches/m1': MATCH });
+    const fetchMock = stubFetch({ '/views/hider/latest': HIDER_VIEW, '/matches/m1': MATCH });
     renderAt('alice', '/hs/m1');
     
     // Wait for the page to fully load and show the content
     await screen.findByText('T17 ACTIVE │ AP 6/10 │ CONN 4 free · 2 in use │ LOA 1 │ ON S1');
     
+    // Verify initial fetch was called
+    expect(fetchMock).toHaveBeenCalledTimes(2); // One for /matches/m1, one for /views/hider/latest
+    
     // Find the "Last result" link and click it
     const lastResultLink = screen.getByRole('link', { name: 'Last result' });
     expect(lastResultLink).toBeTruthy();
     
-    // This test verifies that navigation works correctly without additional fetches
-    // The actual behavior check is more about ensuring no extra polling occurs
-    // which is harder to test in this context, but the structure is correct
+    // Click the link to navigate to result page
+    lastResultLink.click();
+    
+    // Wait a bit for any potential additional fetches
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Verify that no additional fetch to /matches/m1 occurred
+    // The fetch mock should still have only the initial two calls
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

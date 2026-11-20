@@ -31,15 +31,13 @@ function HsResultRoute() {
 
 export function HsMatchRoutes() {
   return (
-    <HsMatchProvider>
-      <Routes>
-        <Route element={<HsLayout />}>
-          <Route index element={<HubPage />} />
-          <Route path="result" element={<HsResultRoute />} />
-          <Route path="classic" element={<HiderSeekerPage />} />
-          <Route path="*" element={<p>No such page.</p>} />
-        </Route>
-      </Routes>
-    </HsMatchProvider>
+    <Routes>
+      <Route element={<HsLayout />}>
+        <Route index element={<HubPage />} />
+        <Route path="result" element={<HsResultRoute />} />
+        <Route path="classic" element={<HiderSeekerPage />} />
+        <Route path="*" element={<p>No such page.</p>} />
+      </Route>
+    </Routes>
   );
 }
