@@ -8,7 +8,7 @@ import LobbyPage from "./pages/LobbyPage";
 import MatchPage from "./pages/MatchPage";
 import JoinMatchPage from "./pages/JoinMatchPage";
 import HiderSeekerLobbyPage from "./pages/HiderSeekerLobbyPage";
-import HiderSeekerPage from "./pages/HiderSeekerPage";
+import { HsMatchRoutes } from "./pages/hiderSeeker/HsRoutes";
 import type { JSX } from "react";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -23,7 +23,7 @@ export default function App() {
       <Route path="/" element={<ProtectedRoute><ErrorBoundary><LobbyPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="/match/:id" element={<ProtectedRoute><MatchPage /></ProtectedRoute>} />
       <Route path="/hs" element={<ProtectedRoute><ErrorBoundary><HiderSeekerLobbyPage /></ErrorBoundary></ProtectedRoute>} />
-      <Route path="/hs/:matchId" element={<ProtectedRoute><ErrorBoundary><HiderSeekerPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/hs/:matchId/*" element={<ProtectedRoute><ErrorBoundary><HsMatchRoutes /></ErrorBoundary></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
