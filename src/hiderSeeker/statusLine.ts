@@ -1,38 +1,53 @@
-export function connectionCounts(view: any) {
+export function connectionCounts(view: {
+  team_connections: number;
+  team_connections_total: number;
+  self: { server_id: number | null };
+  team: Array<{ server_id: number | null }>;
+}): { available: number; inUse: number; lost: number; total: number } {
   const available = view.team_connections;
-  // Count all team members with server_id !== null plus the self player
-  const inUse = view.team.reduce((count: number, hider: any) => {
-    return count + (hider.server_id !== null ? 1 : 0);
-  }, view.self.server_id !== null ? 1 : 0);
+  const inUse = [view.self, ...view.team].filter((hider) => hider.server_id !== null).length;
   const total = view.team_connections_total;
   const lost = Math.max(0, total - available - inUse);
   
   return { available, inUse, lost, total };
 }
 
-export function hiderStatusLine(view: any) {
-  const { available, inUse } = connectionCounts(view);
-  const ap = view.self.action_points;
-  const cap = view.rules.ap_cap;
-  const loa = view.self.loa;
-  const serverId = view.self.server_id;
+export function hiderStatusLine(view: {
+  phase: string;
+  tick: number;
+  self: { server_id: number | null; action_points: number; status: string; loa: number };
+  rules: { ap_cap: number };
+  team_connections: number;
+  team_connections_total: number;
+}): string {
+  const { phase, tick, self, rules, team_connections, team_connections_total } = view;
   
-  let final = 'OFF';
-  if (serverId !== null) {
-    const server = view.servers.find((s: any) => s.server_id === serverId);
-    if (server && server.lights.seeker_connected) {
-      final = `ON S${serverId}`;
-    }
-  }
+  const ap = self.action_points;
+  const cap = rules.ap_cap;
+  const loa = self.loa;
   
-  return `T${view.tick} ${view.phase} │ AP ${ap}/${cap} │ CONN ${available} free · ${inUse} in use │ LOA ${loa} │ ${final}`;
+  const counts = connectionCounts(view);
+  const available = counts.available;
+  const inUse = counts.inUse;
+  
+  const status = self.server_id !== null ? `ON S${self.server_id}` : 'OFF';
+  
+  return `T${tick} ${phase} │ AP ${ap}/${cap} │ CONN ${available} free · ${inUse} in use │ LOA ${loa} │ ${status}`;
 }
 
-export function spectatorStatusLine(publicView: any) {
-  return `T${publicView.tick} ${publicView.phase} │ WATCHING`;
+export function spectatorStatusLine(view: {
+  phase: string;
+  tick: number;
+}): string {
+  const { phase, tick } = view;
+  
+  return `T${tick} ${phase} │ WATCHING`;
 }
 
-export function moveBlockedReason(view: any) {
+export function moveBlockedReason(view: {
+  phase: string;
+  self: { status: string };
+}): string | null {
   if (view.phase === "ACTIVE" && view.self.status === "ACTIVE") {
     return null;
   }

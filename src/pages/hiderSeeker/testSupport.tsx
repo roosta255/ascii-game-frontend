@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../../AuthContext';
 
 // Answers each request with the body registered for the first matching URL fragment.
-export function stubFetch(bodies: Record<string, unknown>) {
+function stubFetch(bodies: Record<string, unknown>) {
   const fetchFn = vi.fn(async (url: string) => {
     const key = Object.keys(bodies).find((fragment) => url.includes(fragment));
     return new Response(key ? JSON.stringify(bodies[key]) : '{}', { status: key ? 200 : 404 });
