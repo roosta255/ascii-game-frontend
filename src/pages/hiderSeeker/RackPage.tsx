@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { rackSlots, lightsLine, occupancy, serverAccess, goalsNeedingServer, relocationTarget } from "../../hiderSeeker/rack";
 import { previewMove } from "../../hiderSeeker/turnPreview";
 import { moveBlockedReason } from "../../hiderSeeker/statusLine";
-import { HiderOnly } from "./HsLayout";
 
 export function RackPage() {
   const { mode, view, publicView, client, run } = useHsMatch();
@@ -29,13 +28,13 @@ export function RackPage() {
             </Link>
           </td>
           <td aria-label={`server ${server.server_id} heat ${server.lights.heat ? 'on' : 'off'}`}>
-            {server.lights.heat ? "\u25A0" : "\xB7"}
+            HEAT {server.lights.heat ? "\u25A0" : "\xB7"}
           </td>
           <td aria-label={`server ${server.server_id} errors ${server.lights.errors ? 'on' : 'off'}`}>
-            {server.lights.errors ? "\u25A0" : "\xB7"}
+            ERR {server.lights.errors ? "\u25A0" : "\xB7"}
           </td>
           <td aria-label={`server ${server.server_id} seeker ${server.lights.seeker_connected ? 'connected' : 'disconnected'}`}>
-            {server.lights.seeker_connected ? "\u25A0" : "\xB7"}
+            SEEK {server.lights.seeker_connected ? "\u25A0" : "\xB7"}
           </td>
           {isHider && (
             <td>{occupancy(currentView, server.server_id)}</td>
@@ -71,30 +70,26 @@ export function RackPage() {
     </table>
   );
   
-  const statusLine = moveBlockedReason(currentView);
+  // For hiders, we need to show the add server button and preview
+  if (isHider && currentView.phase !== 'COMPLETE') {
+    return (
+      <>
+        {table}
+        <button>
+          Add server (1 LOA)
+        </button>
+        <p>{previewMove(currentView, "ADD_SERVER", "PLAY").summary}</p>
+        <button disabled={currentView.self.loa < 1}
+                onClick={() => run(() => client.submitMove(currentView.match_id, currentView.self.account, currentView.revision, "PLAY", { type: "ADD_SERVER" }), "rack")}>
+          Play
+        </button>
+        <button disabled={currentView.self.loa < 1}
+                onClick={() => run(() => client.submitMove(currentView.match_id, currentView.self.account, currentView.revision, "QUEUE", { type: "ADD_SERVER" }), "rack")}>
+          Queue
+        </button>
+      </>
+    );
+  }
   
-  return (
-    <>
-      {table}
-      {statusLine && (
-        <p>{statusLine}</p>
-      )}
-      {isHider && currentView.phase !== 'COMPLETE' && (
-        <>
-          <button>
-            Add server (1 LOA)
-          </button>
-          <p>{previewMove(currentView, "ADD_SERVER", "PLAY").summary}</p>
-          <button disabled={currentView.self.loa < 1}
-                  onClick={() => run(() => client.submitMove(currentView.match_id, currentView.self.account, currentView.revision, "PLAY", { type: "ADD_SERVER" }), "rack")}>
-            Play
-          </button>
-          <button disabled={currentView.self.loa < 1}
-                  onClick={() => run(() => client.submitMove(currentView.match_id, currentView.self.account, currentView.revision, "QUEUE", { type: "ADD_SERVER" }), "rack")}>
-            Queue
-          </button>
-        </>
-      )}
-    </>
-  );
+  return table;
 }

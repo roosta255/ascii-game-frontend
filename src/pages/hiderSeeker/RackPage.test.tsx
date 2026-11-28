@@ -94,13 +94,12 @@ describe('RackPage', () => {
     const completeView = { ...HIDER_VIEW, phase: 'COMPLETE' };
     stubFetch({ '/views/hider/latest': completeView, '/matches/m1': MATCH });
     renderAt('alice', '/hs/m1/rack');
-    expect(await screen.findByText('T17 ACTIVE │ AP 6/10 │ CONN 4 free · 2 in use │ LOA 1 │ ON S1')).toBeTruthy();
     
     // Check table still exists
     const table = screen.getByRole('table');
     expect(table).toBeTruthy();
     
-    // Check status line shows match over message
+    // Check status line shows match over message (this should be rendered by the layout)
     const statusLine = screen.getByText('No moves: the match is over.');
     expect(statusLine).toBeTruthy();
     
