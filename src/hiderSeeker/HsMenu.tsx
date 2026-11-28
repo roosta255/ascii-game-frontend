@@ -11,6 +11,7 @@ export function HsMenu() {
   // For a hider the links are exactly:
   // - Hub (/hs/<matchId>)
   // - Last result (/hs/<matchId>/result)
+  // - Rack (/hs/<matchId>/rack)
   // - Classic (/hs/<matchId>/classic).
   // For a spectator the links are exactly:
   // - Hub (/hs/<matchId>)
@@ -22,6 +23,7 @@ export function HsMenu() {
       {mode === "PLAY" && (
         <>
           {" "}
+          <Link to={`/hs/${matchId}/rack`}>Rack</Link> | 
           <Link to={`/hs/${matchId}/result`}>Last result</Link> | 
         </>
       )}

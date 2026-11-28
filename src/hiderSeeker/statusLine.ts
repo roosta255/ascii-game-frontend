@@ -48,8 +48,12 @@ export function spectatorStatusLine(view: {
 
 export function moveBlockedReason(view: {
   phase: string;
-  self: { status: string };
+  self: { status: string } | null;
 }): string | null {
+  if (!view.self) {
+    return null;
+  }
+  
   if (view.phase === "ACTIVE" && view.self.status === "ACTIVE") {
     return null;
   }
