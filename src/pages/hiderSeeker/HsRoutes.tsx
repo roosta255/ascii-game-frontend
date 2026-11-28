@@ -6,6 +6,7 @@ import { HsLayout } from "./HsLayout";
 import { useHsMatch } from "../../hiderSeeker/HsMatchContext";
 import { RackPage } from "./RackPage";
 import { ServerPage } from "./ServerPage";
+import { RemoveServerPage } from "./RemoveServerPage";
 
 function HsResultRoute() {
   const { resultLines, resultFrom, matchId } = useHsMatch();
@@ -38,6 +39,7 @@ export function HsMatchRoutes() {
         <Route index element={<HubPage />} />
         <Route path="rack" element={<RackPage />} />
         <Route path="servers/:serverId" element={<ServerPage />} />
+        <Route path="servers/:serverId/remove" element={<RemoveServerPage />} />
         <Route path="result" element={<HsResultRoute />} />
         <Route path="classic" element={<HiderSeekerPage />} />
         <Route path="*" element={<p>No such page.</p>} />
