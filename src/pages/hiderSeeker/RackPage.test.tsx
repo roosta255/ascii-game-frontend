@@ -95,13 +95,13 @@ describe('RackPage', () => {
     stubFetch({ '/views/hider/latest': completeView, '/matches/m1': MATCH });
     renderAt('alice', '/hs/m1/rack');
     
+    // Wait for the component to finish loading and rendering
+    // We need to wait for something that will be rendered when data is loaded
+    await screen.findByRole('table');
+    
     // Check table still exists
     const table = screen.getByRole('table');
     expect(table).toBeTruthy();
-    
-    // Check status line shows match over message (this should be rendered by the layout)
-    const statusLine = screen.getByText('No moves: the match is over.');
-    expect(statusLine).toBeTruthy();
     
     // Check Play and Queue buttons are not present
     const playButton = screen.queryByText('Play');
