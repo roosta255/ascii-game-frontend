@@ -17,11 +17,13 @@ export function HsMenu() {
   // - Pass time (/hs/<matchId>/pass)
   // - Player (/hs/<matchId>/player)
   // - Team (/hs/<matchId>/team)
+  // - Events (/hs/<matchId>/events)
   // - Classic (/hs/<matchId>/classic).
   // For a spectator the links are exactly:
   // - Hub (/hs/<matchId>)
   // - Player (/hs/<matchId>/player) - labeled "Hiders"
   // - Team (/hs/<matchId>/team) - labeled "Hiders"
+  // - Events (/hs/<matchId>/events)
   // - Classic (/hs/<matchId>/classic).
   
   return (
@@ -37,12 +39,14 @@ export function HsMenu() {
           <Link to={`/hs/${matchId}/player`}>Player</Link> | 
           <Link to={`/hs/${matchId}/team`}>Team</Link> | 
           <Link to={`/hs/${matchId}/result`}>Last result</Link> | 
+          <Link to={`/hs/${matchId}/events`}>Events</Link> | 
         </>
       ) : (
         <>
           {" "}
           <Link to={`/hs/${matchId}/player`}>Hiders</Link> | 
           <Link to={`/hs/${matchId}/team`}>Hiders</Link> | 
+          <Link to={`/hs/${matchId}/events`}>Events</Link> | 
         </>
       )}
       {" "}
