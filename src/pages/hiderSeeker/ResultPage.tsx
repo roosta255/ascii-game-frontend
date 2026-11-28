@@ -22,6 +22,8 @@ function ResultPageInner() {
       {error && <p>{error}</p>}
       
       <Link to={resultFrom ? `/hs/${matchId}/${resultFrom}` : `/hs/${matchId}`}>Back</Link>
+      {" | "}
+      <Link to={`/hs/${matchId}/events`}>Events</Link>
     </>
   );
 }

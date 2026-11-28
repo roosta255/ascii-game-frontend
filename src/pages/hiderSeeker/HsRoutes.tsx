@@ -15,6 +15,7 @@ import { GoalsPage } from "./GoalsPage";
 import { GoalPage } from "./GoalPage";
 import { PlayerPage } from "./PlayerPage";
 import { TeamPage } from "./TeamPage";
+import { EventsPage } from "./EventsPage";
 
 function HsResultRoute() {
   const { resultLines, resultFrom, matchId } = useHsMatch();
@@ -56,6 +57,7 @@ export function HsMatchRoutes() {
         <Route path="result" element={<HsResultRoute />} />
         <Route path="player" element={<PlayerPage />} />
         <Route path="team" element={<TeamPage />} />
+        <Route path="events" element={<EventsPage />} />
         <Route path="classic" element={<HiderSeekerPage />} />
         <Route path="*" element={<p>No such page.</p>} />
       </Route>

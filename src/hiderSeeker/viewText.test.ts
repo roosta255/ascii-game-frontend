@@ -9,7 +9,8 @@ import {
   teammateSummary,
   pendingSummary,
   publicHiderSummary,
-  eventText
+  eventText,
+  eventDescription
 } from './viewText';
 
 const view = {
@@ -77,5 +78,13 @@ describe('viewText', () => {
     expect(eventText({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 2, outcome: 'HIT' })).toBe('Tick 4: seeker probed server 2, hit');
     expect(eventText({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 0, outcome: 'MISS' })).toBe('Tick 4: seeker probed server 0, miss');
     expect(eventText({ type: 'SOMETHING_NEW', tick: 5, revision: 9 })).toBe('Tick 5: SOMETHING_NEW');
+  });
+
+  it('eventDescription returns correct event descriptions', () => {
+    expect(eventDescription({ type: 'SERVER_ADDED', tick: 3, revision: 7 })).toBe('server added');
+    expect(eventDescription({ type: 'SERVER_REMOVED', tick: 3, revision: 7 })).toBe('server removed');
+    expect(eventDescription({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 2, outcome: 'HIT' })).toBe('seeker probed server 2, hit');
+    expect(eventDescription({ type: 'SERVER_PROBED', tick: 4, revision: 8, server_id: 0, outcome: 'MISS' })).toBe('seeker probed server 0, miss');
+    expect(eventDescription({ type: 'SOMETHING_NEW', tick: 5, revision: 9 })).toBe('SOMETHING_NEW');
   });
 });

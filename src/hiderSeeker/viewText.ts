@@ -58,14 +58,19 @@ export function publicHiderSummary(hider: any): string {
 
 // One public event as text: "Tick 3: server added", "Tick 3: server removed", "Tick 4: seeker probed server 2, hit"; any other type is "Tick <tick>: <type>".
 export function eventText(event: any): string {
+  return `Tick ${event.tick}: ${eventDescription(event)}`;
+}
+
+// Extract the description part of an event, stripping any leading "Tick N: " prefix.
+export function eventDescription(event: any): string {
   if (event.type === "SERVER_ADDED") {
-    return `Tick ${event.tick}: server added`;
+    return "server added";
   }
   if (event.type === "SERVER_REMOVED") {
-    return `Tick ${event.tick}: server removed`;
+    return "server removed";
   }
   if (event.type === "SERVER_PROBED") {
-    return `Tick ${event.tick}: seeker probed server ${event.server_id}, ${String(event.outcome).toLowerCase()}`;
+    return `seeker probed server ${event.server_id}, ${String(event.outcome).toLowerCase()}`;
   }
-  return `Tick ${event.tick}: ${event.type}`;
+  return event.type;
 }
