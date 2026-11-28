@@ -12,6 +12,8 @@ export function HsMenu() {
   // - Hub (/hs/<matchId>)
   // - Last result (/hs/<matchId>/result)
   // - Rack (/hs/<matchId>/rack)
+  // - Move queue (/hs/<matchId>/queue)
+  // - Pass time (/hs/<matchId>/pass)
   // - Classic (/hs/<matchId>/classic).
   // For a spectator the links are exactly:
   // - Hub (/hs/<matchId>)
@@ -24,6 +26,8 @@ export function HsMenu() {
         <>
           {" "}
           <Link to={`/hs/${matchId}/rack`}>Rack</Link> | 
+          <Link to={`/hs/${matchId}/queue`}>Move queue</Link> | 
+          <Link to={`/hs/${matchId}/pass`}>Pass time</Link> | 
           <Link to={`/hs/${matchId}/result`}>Last result</Link> | 
         </>
       )}
