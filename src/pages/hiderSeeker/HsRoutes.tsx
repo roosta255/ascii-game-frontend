@@ -11,6 +11,8 @@ import { ServerActionsPage } from "./ServerActionsPage";
 import { ResultPage } from "./ResultPage";
 import { PassPage } from "./PassPage";
 import { QueuePage } from "./QueuePage";
+import { GoalsPage } from "./GoalsPage";
+import { GoalPage } from "./GoalPage";
 
 function HsResultRoute() {
   const { resultLines, resultFrom, matchId } = useHsMatch();
@@ -47,6 +49,8 @@ export function HsMatchRoutes() {
         <Route path="servers/:serverId/actions" element={<ServerActionsPage />} />
         <Route path="pass" element={<PassPage />} />
         <Route path="queue" element={<QueuePage />} />
+        <Route path="goals" element={<GoalsPage />} />
+        <Route path="goals/:goalId" element={<GoalPage />} />
         <Route path="result" element={<HsResultRoute />} />
         <Route path="classic" element={<HiderSeekerPage />} />
         <Route path="*" element={<p>No such page.</p>} />
