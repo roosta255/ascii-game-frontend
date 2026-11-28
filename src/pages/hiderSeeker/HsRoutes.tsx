@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet, Link } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import { HsMatchProvider } from "../../hiderSeeker/HsMatchContext";
 import { HubPage } from "./HubPage";
 import HiderSeekerPage from "../HiderSeekerPage";
@@ -7,6 +7,10 @@ import { useHsMatch } from "../../hiderSeeker/HsMatchContext";
 import { RackPage } from "./RackPage";
 import { ServerPage } from "./ServerPage";
 import { RemoveServerPage } from "./RemoveServerPage";
+import { ServerActionsPage } from "./ServerActionsPage";
+import { ResultPage } from "./ResultPage";
+import { PassPage } from "./PassPage";
+import { QueuePage } from "./QueuePage";
 
 function HsResultRoute() {
   const { resultLines, resultFrom, matchId } = useHsMatch();
@@ -40,6 +44,9 @@ export function HsMatchRoutes() {
         <Route path="rack" element={<RackPage />} />
         <Route path="servers/:serverId" element={<ServerPage />} />
         <Route path="servers/:serverId/remove" element={<RemoveServerPage />} />
+        <Route path="servers/:serverId/actions" element={<ServerActionsPage />} />
+        <Route path="pass" element={<PassPage />} />
+        <Route path="queue" element={<QueuePage />} />
         <Route path="result" element={<HsResultRoute />} />
         <Route path="classic" element={<HiderSeekerPage />} />
         <Route path="*" element={<p>No such page.</p>} />
