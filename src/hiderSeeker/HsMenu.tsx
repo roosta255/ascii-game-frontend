@@ -10,6 +10,7 @@ export function HsMenu() {
   
   // For a hider the links are exactly:
   // - Hub (/hs/<matchId>)
+  // - Goals (/hs/<matchId>/goals)
   // - Last result (/hs/<matchId>/result)
   // - Rack (/hs/<matchId>/rack)
   // - Move queue (/hs/<matchId>/queue)
@@ -25,6 +26,7 @@ export function HsMenu() {
       {mode === "PLAY" && (
         <>
           {" "}
+          <Link to={`/hs/${matchId}/goals`}>Goals</Link> | 
           <Link to={`/hs/${matchId}/rack`}>Rack</Link> | 
           <Link to={`/hs/${matchId}/queue`}>Move queue</Link> | 
           <Link to={`/hs/${matchId}/pass`}>Pass time</Link> | 
