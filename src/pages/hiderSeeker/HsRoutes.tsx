@@ -13,6 +13,8 @@ import { PassPage } from "./PassPage";
 import { QueuePage } from "./QueuePage";
 import { GoalsPage } from "./GoalsPage";
 import { GoalPage } from "./GoalPage";
+import { PlayerPage } from "./PlayerPage";
+import { TeamPage } from "./TeamPage";
 
 function HsResultRoute() {
   const { resultLines, resultFrom, matchId } = useHsMatch();
@@ -52,6 +54,8 @@ export function HsMatchRoutes() {
         <Route path="goals" element={<GoalsPage />} />
         <Route path="goals/:goalId" element={<GoalPage />} />
         <Route path="result" element={<HsResultRoute />} />
+        <Route path="player" element={<PlayerPage />} />
+        <Route path="team" element={<TeamPage />} />
         <Route path="classic" element={<HiderSeekerPage />} />
         <Route path="*" element={<p>No such page.</p>} />
       </Route>
