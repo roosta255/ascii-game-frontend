@@ -1,7 +1,6 @@
 import { useHsMatch } from "../../hiderSeeker/HsMatchContext";
 import { HiderOnly } from "./HsLayout";
 import { resourceRows } from "../../hiderSeeker/playerResources";
-import { hiderStatusLine } from "../../hiderSeeker/statusLine";
 
 export function PlayerPage() {
   const { view, mode } = useHsMatch();
@@ -10,12 +9,8 @@ export function PlayerPage() {
     return null;
   }
   
-  const statusLine = hiderStatusLine(view);
-  
   return (
     <HiderOnly>
-      <p>{statusLine}</p>
-      
       <table>
         <thead>
           <tr>
